@@ -1,0 +1,13 @@
+id: 01M2KJEVPKT1C3CFZAW240D26N
+at: '2026-09-15T22:19:34Z'
+source: plan:adr-amends
+target: '#7'
+kind: scope
+summary: '**`supersede_backlink` keeps its string comparison.** It misses `adr:2`
+  and `adr:0002#x` spellings. The new amends checks compare numbers (decision 6);
+  fixing the supersedes side moves to #7. Do not touch `supersede_backlink` in a refactor
+  phase: changing its semantics is a blocker, not a refactor.'
+detail: tasks/adr-amends.md#deliberate-scope-cuts-do-not-build
+proposed_by: geuben
+reason: mentions
+status: pending

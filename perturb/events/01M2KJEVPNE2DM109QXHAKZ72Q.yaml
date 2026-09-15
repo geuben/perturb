@@ -1,0 +1,14 @@
+id: 01M2KJEVPNE2DM109QXHAKZ72Q
+at: '2026-09-15T22:19:34Z'
+source: plan:adr-amends
+target: '#8'
+kind: scope
+summary: '**`**Supersedes:**` lines keep requiring the `ADR` prefix.** `_whole_adr_numbers`
+  is left alone. The status-line ref grammar accepts bare numbers (decision 9) because
+  `amended by 0021` is the observed form. This divergence between the two migrate
+  parsers is deliberate; whether to unify them moves to #8. If a cycle finds it must
+  change `_whole_adr_numbers` to go green, stop and raise a `plan_defect` blocker.'
+detail: tasks/adr-amends.md#deliberate-scope-cuts-do-not-build
+proposed_by: geuben
+reason: mentions
+status: pending
