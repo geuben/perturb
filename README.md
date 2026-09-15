@@ -132,8 +132,10 @@ An issue belongs to an area when it carries the `area:fares` label or its plan l
 You need Python 3.11+, `git`, a repository hosted on GitHub, and the [`gh`](https://cli.github.com/)
 CLI logged in (or `GH_TOKEN` set). If you use a wrapper around `gh`, point `PERTURB_GH` at it.
 
+perturb is [on PyPI](https://pypi.org/project/perturb/):
+
 ```sh
-uv tool install git+https://github.com/geuben/perturb
+uv tool install perturb      # or: pipx install perturb
 ```
 
 ## Quick start
