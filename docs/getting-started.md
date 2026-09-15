@@ -9,14 +9,15 @@ The examples use the bike-share app from the [README](../README.md).
 - A GitHub repository whose `origin` remote is on GitHub.
 - Issues organised with sub-issues and blocked-by links, if you want `perturb next` to be useful.
   Epics carry the `epic` label.
-- Python 3.11+, [`uv`](https://docs.astral.sh/uv/), and [`gh`](https://cli.github.com/) logged in with
+- Python 3.11+, [`uv`](https://docs.astral.sh/uv/) or [`pipx`](https://pipx.pypa.io/), and
+  [`gh`](https://cli.github.com/) logged in with
   access to the repository (or `GH_TOKEN` set). If you use a wrapper around `gh`, set `PERTURB_GH`
   to its name.
 
 ## Install and set up a repository
 
 ```sh
-uv tool install git+https://github.com/geuben/perturb
+uv tool install perturb      # or: pipx install perturb
 cd your-repo
 perturb init
 ```
@@ -188,7 +189,8 @@ jobs:
         with:
           fetch-depth: 0 # the stale gate reads each plan's last commit from git history
       - uses: astral-sh/setup-uv@v6
-      - run: uvx --from git+https://github.com/geuben/perturb perturb check
+      # pin the version so a new perturb release can't change CI without a commit
+      - run: uvx perturb@0.0.1 check
         env:
           GH_TOKEN: ${{ github.token }}
 ```
