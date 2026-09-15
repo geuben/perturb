@@ -226,17 +226,19 @@ No `docs/INVARIANTS.md` in this repo.
   issue asks only for amends relations, and carrying `superseded_by` implies a status change. They
   keep warning as today (pinned as a rejected form in cycles 8 and 9).
 - **`supersede_backlink` keeps its string comparison.** It misses `adr:2` and `adr:0002#x` spellings.
-  The new amends checks compare numbers (decision 6); fixing the supersedes side is a separate
-  change. Do not touch `supersede_backlink` in a refactor phase: changing its semantics is a
+  The new amends checks compare numbers (decision 6); fixing the supersedes side moves to #7. Do
+  not touch `supersede_backlink` in a refactor phase: changing its semantics is a
   blocker, not a refactor.
 - **`**Supersedes:**` lines keep requiring the `ADR` prefix.** `_whole_adr_numbers` is left alone.
   The status-line ref grammar accepts bare numbers (decision 9) because `amended by 0021` is the
-  observed form. This divergence between the two migrate parsers is deliberate. If a cycle finds it
+  observed form. This divergence between the two migrate parsers is deliberate; whether to unify
+  them moves to #8. If a cycle finds it
   must change `_whole_adr_numbers` to go green, stop and raise a `plan_defect` blocker.
 - **An amending ADR with no acknowledged targets still needs events or `no-propagation`.**
   `unpropagated_adr_findings` is unchanged, as for a superseding ADR today.
 - **`perturb show adr:N` does not display relations.** It does not display `supersedes` either.
-- **A bare string for `supersedes` is not normalised.** Decision 5 applies to the new keys only.
+- **A bare string for `supersedes` is not normalised.** Decision 5 applies to the new keys only;
+  the supersedes side moves to #7.
 - **The local `.claude/skills` texts** listing `--kind decision|scope|friction|supersede` are
   untracked and outside this repository.
 
