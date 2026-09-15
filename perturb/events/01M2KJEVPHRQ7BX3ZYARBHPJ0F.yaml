@@ -1,0 +1,18 @@
+id: 01M2KJEVPHRQ7BX3ZYARBHPJ0F
+at: '2026-09-15T22:19:34Z'
+source: plan:adr-amends
+target: '#4'
+kind: decision
+summary: '**No ADR and no knock-on pushes.** This repo keeps no `docs/adr/`; the format
+  is specified in `docs/adr-format.md`. Open issues #4 and #6 were checked; neither''s
+  planning changes with these decisions. #6 edits the ADR glob in `adr_findings`,
+  the same function cycles 2–5 extend, which is a merge overlap only, not a design
+  dependency.'
+detail: tasks/adr-amends.md#design-decisions-locked
+proposed_by: geuben
+reason: mentions
+status: dismissed
+ack:
+  at: '2026-09-15T22:19:46Z'
+  by: geuben
+  note: 'Only cited: adr-amends decision 11 records that #4''s planning does not change'
