@@ -6,6 +6,23 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`perturb adr migrate` deleted consequences written as paragraphs.** Only `- ` bullets were
+  carried; a Consequences section of prose paragraphs (`**Gains.** …`) was rewritten as an empty
+  list. Each paragraph is now a consequence, like each bullet.
+
+- **`perturb adr migrate` wrote front-matter that didn't parse** when a title contained a colon or
+  started with a YAML indicator. Titles are now quoted, and an `ADR-0021:` prefix is stripped as
+  well as `ADR 0021 —`.
+- **`perturb adr migrate` no longer overwrites an ADR with a result it can't parse.** It refuses
+  with the parser's reason and leaves the file untouched.
+- **A status line wrapped over several lines** is read as one annotation instead of leaving its
+  continuation lines in the body.
+- **Consequence `affects` no longer picks up refs that don't name issues**: a `#N` inside a link
+  to something other than an issue (`[Risk #9](../hardware.md#risks)`), or after `PR` or
+  `pull request`.
+
 ## [0.0.1] - 2026-09-15
 
 First public release. perturb was developed privately under the name `planner`; nothing was
