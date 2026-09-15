@@ -1,0 +1,16 @@
+id: 01M2KK8KSR823TS0ZGVAFEQ794
+at: '2026-09-15T22:33:38Z'
+source: plan:adr-filenames
+target: '#4'
+kind: decision
+summary: '**No knock-on pushes.** #3''s plan (`tasks/adr-amends.md`) extends `adr_findings`
+  in cycles 2–5, but its fixtures use canonical names (`0003-old.md`, `0005-new.md`).
+  This is a merge overlap only. #4 does not touch ADRs.'
+detail: tasks/adr-filenames.md#design-decisions-locked
+proposed_by: geuben
+reason: mentions
+status: dismissed
+ack:
+  at: '2026-09-15T22:33:52Z'
+  by: geuben
+  note: 'Only cited: adr-filenames decision 6 records that #4 does not touch ADRs'
