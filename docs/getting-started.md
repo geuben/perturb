@@ -10,9 +10,8 @@ The examples use the bike-share app from the [README](../README.md).
 - Issues organised with sub-issues and blocked-by links, if you want `perturb next` to be useful.
   Epics carry the `epic` label.
 - Python 3.11+, [`uv`](https://docs.astral.sh/uv/) or [`pipx`](https://pipx.pypa.io/), and
-  [`gh`](https://cli.github.com/) logged in with
-  access to the repository (or `GH_TOKEN` set). If you use a wrapper around `gh`, set `PERTURB_GH`
-  to its name.
+  [`gh`](https://cli.github.com/) logged in with access to the repository (or `GH_TOKEN` set). If
+  you use a wrapper around `gh`, set `PERTURB_GH` to its name.
 
 ## Install and set up a repository
 
