@@ -1,0 +1,15 @@
+id: 01M2KM3EDSK7M0ADFG68NZBG55
+at: '2026-09-15T22:48:17Z'
+source: plan:supersedes-ref-grammar
+target: '#3'
+kind: scope
+summary: '**#3''s status-line parser is not rewired to `_whole_adr_numbers`.**'
+detail: tasks/supersedes-ref-grammar.md#deliberate-scope-cuts-do-not-build
+proposed_by: geuben
+reason: mentions
+status: dismissed
+ack:
+  at: '2026-09-15T22:48:35Z'
+  by: geuben
+  note: 'Confirming would make #3''s hardened plan stale; whether #3 reuses _whole_adr_numbers
+    is a user decision, to be pushed explicitly if wanted'

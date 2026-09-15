@@ -1,0 +1,18 @@
+id: 01M2KM3EDPG16E4NT8CPKC1WBH
+at: '2026-09-15T22:48:17Z'
+source: plan:supersedes-ref-grammar
+target: '#3'
+kind: decision
+summary: '**No new event or push to #3 from this plan.** #3''s hardened plan builds
+  its own status-line ref parsing (decision 9 there). Pointing it at `_whole_adr_numbers`
+  would change that plan and make it stale, so that choice is left to the user (see
+  the readiness report).'
+detail: tasks/supersedes-ref-grammar.md#design-decisions-locked
+proposed_by: geuben
+reason: mentions
+status: dismissed
+ack:
+  at: '2026-09-15T22:48:35Z'
+  by: geuben
+  note: 'Only cited: supersedes-ref-grammar decision 4 records that this plan does
+    not push to #3; rewiring #3 is left to the user'

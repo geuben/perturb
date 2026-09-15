@@ -1,0 +1,11 @@
+id: 01M2KM3EDWGF0RFFMD4Z7TDTEM
+at: '2026-09-15T22:48:17Z'
+source: plan:supersedes-ref-grammar
+target: '#12'
+kind: scope
+summary: '**`**Amends:**` / `**Amended by:**` lines** are tracked in #12, blocked
+  by #3.'
+detail: tasks/supersedes-ref-grammar.md#deliberate-scope-cuts-do-not-build
+proposed_by: geuben
+reason: mentions
+status: pending
