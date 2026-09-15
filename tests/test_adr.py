@@ -281,6 +281,7 @@ def test_migrate_strips_a_hyphen_and_colon_adr_prefix_from_the_title():
         "'quoted' start",
         "#1 priority - ship it",
         "yes",
+        "Slint over QML — and LVGL",
     ],
 )
 def test_migrate_title_survives_yaml_special_characters(title):
@@ -291,6 +292,18 @@ def test_migrate_title_survives_yaml_special_characters(title):
     )
     result, _warnings = migrate_adr(text, adr_id=8)
     assert parse_adr(result).title == title
+    assert title in result.split("---")[1], "the title stays readable, not escaped"
+
+
+@pytest.mark.parametrize("follower", ["> A quote straight after the status.", "## Context"])
+def test_migrate_ends_the_status_line_at_a_quote_or_heading(follower):
+    text = (
+        "# ADR 0021 — Resolution\n\n"
+        f"**Status:** accepted · 2026-09-10\n{follower}\n\n"
+        "## Context\n\nPROSE.\n\n## Consequences\n\n- X happens.\n"
+    )
+    result, warnings = migrate_adr(text, adr_id=21)
+    assert (follower in result, warnings) == (True, [])
 
 
 def test_migrate_treats_a_wrapped_status_line_as_one_annotation():
@@ -317,6 +330,7 @@ def test_migrate_treats_a_wrapped_status_line_as_one_annotation():
     [
         ("Recorded in [Risk #9](../hardware.md#known-risks).", []),
         ("The divider change needed a rebuild (PR #93).", []),
+        ("Landed in pr #93.", []),
         ("Tightened in pull request #93, tracked by #84.", ["#84"]),
         ("Tracked by [#13](https://github.com/x/y/issues/13).", ["#13"]),
         ("See [the follow-up, #40](https://github.com/x/y/issues/40).", ["#40"]),

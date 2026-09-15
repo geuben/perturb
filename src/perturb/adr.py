@@ -93,7 +93,7 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
             # A long status line wraps; its continuation lines are part of the annotation.
             for j in range(i + 1, first_heading):
                 follow = lines[j]
-                if not follow.strip() or follow.startswith(("#", ">", "**")):
+                if not follow.strip() or follow.startswith((">", "**")):
                     break
                 carried.add(j)
                 rest += " " + follow.strip()
