@@ -1,0 +1,362 @@
+import pytest
+
+from perturb.adr import (
+    Adr,
+    AdrError,
+    Consequence,
+    migrate_adr,
+    parse_adr,
+    parse_supersedes_ref,
+)
+
+ADR_WELL_FORMED = """\
+---
+id: 2
+title: Store rides at per-trip grain
+status: accepted
+date: 2026-09-08
+supersedes: [adr:0001]
+areas: [rides, rollup]
+---
+
+## Context
+
+Some context prose.
+
+## Decision
+
+The decision prose.
+
+## Consequences
+
+```yaml
+- id: volume
+  text: 40000 rides per dock per year.
+  kind: decision
+
+- id: dst
+  text: Local days have 46, 48 or 50 periods.
+  affects: ["#27", "area:rollup"]
+  kind: scope
+
+- id: reprice
+  text: Re-pricing any period against any fare plan is the same function.
+  kind: decision
+```
+"""
+
+
+def test_parses_well_formed_adr():
+    adr = parse_adr(ADR_WELL_FORMED)
+    assert adr == Adr(
+        id=2,
+        title="Store rides at per-trip grain",
+        status="accepted",
+        date="2026-09-08",
+        supersedes=["adr:0001"],
+        areas=["rides", "rollup"],
+        consequences=[
+            Consequence(
+                id="volume",
+                text="40000 rides per dock per year.",
+                affects=[],
+                kind="decision",
+            ),
+            Consequence(
+                id="dst",
+                text="Local days have 46, 48 or 50 periods.",
+                affects=["#27", "area:rollup"],
+                kind="scope",
+            ),
+            Consequence(
+                id="reprice",
+                text="Re-pricing any period against any fare plan is the same function.",
+                affects=[],
+                kind="decision",
+            ),
+        ],
+    )
+
+
+PROSE_ADR_CYCLE1 = """\
+# ADR 0002 — Store rides at per-trip grain
+
+**Status:** accepted · 2026-09-08
+
+## Context
+
+Some context prose.
+
+## Decision
+
+The decision prose.
+
+## Consequences
+
+- Data fits on a single node.
+- The parser is tested by #35 upstream.
+- Costs are recalculated monthly via [#13](https://github.com/x/y/issues/13).
+"""
+
+
+PROSE_ADR_CYCLE2 = """\
+# ADR 0003 — Aggregate at dock level
+
+**Status:** accepted · 2026-08-01
+
+## Context
+
+MARKER_CONTEXT: aggregation is always at the dock level.
+
+## Decision
+
+MARKER_DECISION: the aggregation key is (dock_id, period).
+
+## Consequences
+
+- Results are deterministic.
+"""
+
+PROSE_CYCLE2_BODY = (
+    "## Context\n\nMARKER_CONTEXT: aggregation is always at the dock level.\n\n"
+    "## Decision\n\nMARKER_DECISION: the aggregation key is (dock_id, period).\n"
+)
+
+
+PROSE_ADR_CYCLE3 = """\
+# ADR 0004 — Use consistent grain
+
+**Status:** accepted · 2026-08-15
+
+## Consequences
+
+- The system stores each ride precisely.
+- The system stores each ride redundantly.
+"""
+
+
+PROSE_ADR_SUBSECTION = """\
+# ADR 0005 — Complex consequences
+
+**Status:** accepted · 2026-09-13
+
+## Consequences
+
+### Type mapping
+
+- First outcome described.
+- Second outcome described.
+"""
+
+
+def test_migrate_skips_subsection_headings_in_consequences():
+    adr = parse_adr(migrate_adr(PROSE_ADR_SUBSECTION, adr_id=5)[0])
+    texts = [c.text for c in adr.consequences]
+    assert texts == ["First outcome described.", "Second outcome described."]
+
+
+def test_migrate_refuses_already_structured_adr():
+    with pytest.raises(AdrError) as exc_info:
+        migrate_adr(ADR_WELL_FORMED, adr_id=2)
+    assert exc_info.value.reason == "already_structured"
+
+
+def test_migrate_dedupes_colliding_consequence_ids():
+    adr = parse_adr(migrate_adr(PROSE_ADR_CYCLE3, adr_id=4)[0])
+    ids = [c.id for c in adr.consequences]
+    assert ids == ["the-system-stores-each-ride", "the-system-stores-each-ride-2"]
+
+
+def test_migrate_preserves_context_and_decision():
+    result, warnings = migrate_adr(PROSE_ADR_CYCLE2, adr_id=3)
+    assert PROSE_CYCLE2_BODY in result
+    assert warnings == []
+
+
+def test_migrate_carries_a_whole_adr_supersedes_line():
+    text = (
+        "# ADR 0006 — Use DuckDB\n\n"
+        "**Status:** accepted · 2026-09-10\n"
+        "**Supersedes:** [ADR 0003](0003-typescript-stack.md) and ADR 4\n\n"
+        "## Context\n\nPROSE.\n\n## Consequences\n\n- X happens.\n"
+    )
+    result, warnings = migrate_adr(text, adr_id=6)
+    assert parse_adr(result).supersedes == ["adr:0003", "adr:0004"]
+    assert "**Supersedes:**" not in result
+    assert warnings == []
+
+
+def test_migrate_keeps_and_warns_about_a_partial_supersedes_line():
+    line = "**Supersedes:** the storage engine half of [ADR 0003](0003-typescript-stack.md)"
+    text = (
+        "# ADR 0005 — Use DuckDB\n\n"
+        f"**Status:** accepted · 2026-09-10\n{line}\n\n"
+        "## Context\n\nPROSE.\n\n## Consequences\n\n- X happens.\n"
+    )
+    result, warnings = migrate_adr(text, adr_id=5)
+    assert parse_adr(result).supersedes == []
+    assert line in result.split("## Context")[0]
+    assert len(warnings) == 1
+    assert "Supersedes" in warnings[0] and "adr:0003#" in warnings[0]
+
+
+def test_migrate_keeps_preamble_prose_and_warns_about_a_status_annotation():
+    text = (
+        "# ADR 0003 — TypeScript stack\n\n"
+        "**Status:** superseded · 2026-08-01 · **storage engine superseded by ADR 0005**\n\n"
+        "> The language decision below stands.\n> Postgres does not.\n\n"
+        "## Context\n\nPROSE.\n\n## Consequences\n\n- X happens.\n"
+    )
+    result, warnings = migrate_adr(text, adr_id=3)
+    preamble = result.split("## Context")[0]
+    assert "> The language decision below stands.\n> Postgres does not.\n" in preamble
+    assert "**Status:**" not in result
+    assert len(warnings) == 1
+    assert "storage engine superseded by ADR 0005" in warnings[0]
+    assert parse_adr(result).status == "superseded"
+
+
+@pytest.mark.parametrize(
+    "entry, expected",
+    [
+        ("adr:0003", (3, None)),
+        ("adr:3", (3, None)),
+        ("adr:0003#postgres-over-sqlite", (3, "postgres-over-sqlite")),
+        ("ADR 3", None),
+        ("adr:0003#", None),
+        ("0003", None),
+    ],
+)
+def test_parse_supersedes_ref(entry, expected):
+    assert parse_supersedes_ref(entry) == expected
+
+
+def test_migrate_roundtrips_through_parser():
+    result, _warnings = migrate_adr(PROSE_ADR_CYCLE1, adr_id=2)
+    adr = parse_adr(result)
+    assert adr == Adr(
+        id=2,
+        title="Store rides at per-trip grain",
+        status="accepted",
+        date="2026-09-08",
+        supersedes=[],
+        areas=[],
+        consequences=[
+            Consequence(
+                id="data-fits-on-a-single",
+                text="Data fits on a single node.",
+                affects=[],
+                kind="decision",
+            ),
+            Consequence(
+                id="the-parser-is-tested-by",
+                text="The parser is tested by #35 upstream.",
+                affects=["#35"],
+                kind="decision",
+            ),
+            Consequence(
+                id="costs-are-recalculated-monthly-via",
+                text="Costs are recalculated monthly via [#13](https://github.com/x/y/issues/13).",
+                affects=["#13"],
+                kind="decision",
+            ),
+        ],
+    )
+
+
+def test_absent_frontmatter_raises():
+    text = "## Context\n\nNo front-matter here.\n"
+    with pytest.raises(AdrError):
+        parse_adr(text)
+
+
+def test_missing_required_frontmatter_field_raises():
+    text = (
+        "---\nid: 2\nstatus: accepted\ndate: 2026-09-08\n---\n\n"
+        "## Consequences\n\n```yaml\n- id: volume\n  text: Some text.\n  kind: decision\n```\n"
+    )
+    with pytest.raises(AdrError):
+        parse_adr(text)
+
+
+def test_missing_required_consequence_field_raises():
+    text = (
+        "---\nid: 2\ntitle: A title\nstatus: accepted\ndate: 2026-09-08\n---\n\n"
+        "## Consequences\n\n```yaml\n- id: volume\n```\n"
+    )
+    with pytest.raises(AdrError):
+        parse_adr(text)
+
+
+def test_duplicate_consequence_id_raises():
+    text = (
+        "---\nid: 2\ntitle: A title\nstatus: accepted\ndate: 2026-09-08\n---\n\n"
+        "## Consequences\n\n```yaml\n"
+        "- id: volume\n  text: First.\n  kind: decision\n\n"
+        "- id: volume\n  text: Duplicate.\n  kind: decision\n```\n"
+    )
+    with pytest.raises(AdrError):
+        parse_adr(text)
+
+
+def test_consequence_kind_defaults_to_decision():
+    text = (
+        "---\nid: 2\ntitle: A title\nstatus: accepted\ndate: 2026-09-08\n---\n\n"
+        "## Consequences\n\n```yaml\n- id: volume\n  text: Some text.\n```\n"
+    )
+    adr = parse_adr(text)
+    assert adr.consequences[0].kind == "decision"
+
+
+def test_optional_frontmatter_lists_default_empty():
+    text = (
+        "---\nid: 2\ntitle: A title\nstatus: accepted\ndate: 2026-09-08\n---\n\n"
+        "## Consequences\n\n```yaml\n- id: volume\n  text: Some text.\n  kind: decision\n```\n"
+    )
+    adr = parse_adr(text)
+    assert (adr.supersedes, adr.areas) == ([], [])
+
+
+def test_superseded_by_is_parsed():
+    text = (
+        "---\nid: 2\ntitle: A title\nstatus: superseded\ndate: 2026-09-08\n"
+        "superseded_by: adr:0001\n---\n\n"
+        "## Consequences\n\n```yaml\n- id: v\n  text: Some text.\n  kind: decision\n```\n"
+    )
+    adr = parse_adr(text)
+    assert adr.superseded_by == "adr:0001"
+
+
+def test_no_propagation_flag_and_reason_are_parsed():
+    base = (
+        "---\nid: 2\ntitle: A title\nstatus: accepted\ndate: 2026-09-08\n"
+        "{extra}"
+        "---\n\n## Consequences\n\n```yaml\n- id: v\n  text: ok.\n  kind: decision\n```\n"
+    )
+    cases = {
+        "absent": ("", (False, None)),
+        "true_with_reason": (
+            "no-propagation: true\nno-propagation-reason: prose only\n",
+            (True, "prose only"),
+        ),
+        "yes": ("no-propagation: yes\n", (True, None)),
+        "quoted_true": ('no-propagation: "true"\n', (False, None)),
+        "false": ("no-propagation: false\n", (False, None)),
+        "reason_only": ("no-propagation-reason: why\n", (False, "why")),
+        "non_str_reason": ("no-propagation: true\nno-propagation-reason: 42\n", (True, None)),
+    }
+    outcome = {}
+    for case, (extra_fm, _) in cases.items():
+        adr = parse_adr(base.format(extra=extra_fm))
+        outcome[case] = (adr.no_propagation, adr.no_propagation_reason)
+    expected = {case: exp for case, (_, exp) in cases.items()}
+    assert outcome == expected
+
+
+def test_non_list_consequences_raises():
+    text = (
+        "---\nid: 2\ntitle: A title\nstatus: accepted\ndate: 2026-09-08\n---\n\n"
+        "## Consequences\n\n```yaml\nkind: mapping\ntext: not a list\n```\n"
+    )
+    with pytest.raises(AdrError):
+        parse_adr(text)

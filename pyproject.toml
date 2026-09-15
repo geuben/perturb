@@ -1,0 +1,63 @@
+[project]
+name = "perturb"
+dynamic = ["version"]
+description = "Planning ledger for agent-driven development: issue graph, decision inbox, staleness gate"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "geuben" }]
+requires-python = ">=3.11"
+dependencies = [
+    "pathspec>=1.1.1",
+    "pyyaml>=6.0",
+]
+keywords = ["planning", "agents", "ai", "github", "issues", "adr", "workflow"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development",
+]
+
+[project.urls]
+Homepage = "https://github.com/geuben/perturb"
+Repository = "https://github.com/geuben/perturb"
+Issues = "https://github.com/geuben/perturb/issues"
+Changelog = "https://github.com/geuben/perturb/blob/main/CHANGELOG.md"
+
+[project.scripts]
+perturb = "perturb.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/perturb/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/perturb"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/src", "/tests", "/README.md", "/LICENSE", "/CHANGELOG.md", "/SECURITY.md"]
+
+[dependency-groups]
+dev = ["pytest>=8.0", "pytest-json-report>=1.5", "pytest-xdist>=3.5", "ruff>=0.5", "zizmor>=1.29"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-n", "auto"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

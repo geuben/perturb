@@ -1,0 +1,8 @@
+# perturb is developed under tdd-cli. One pytest project rooted at the repo.
+# Plans live in tasks/, friction logs in tasks/friction-logs/ (see tasks/README.md).
+
+[project.perturb]
+root       = "."
+adapter    = "pytest"
+test_paths = ["tests/"]
+lint       = ["uv run ruff check"]

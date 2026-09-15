@@ -1,0 +1,143 @@
+# ADR format
+
+The ADR is the main source of events, so its format decides how good the proposals are. The
+ADRs it replaces are prose with a title line, a status line and three headings. The
+useful information for propagation is already in them, in the **Consequences** section, as
+bullets that name issues in passing (`#13`, `#35`). The structured format keeps the prose and
+makes each consequence addressable.
+
+## The unit of propagation is a consequence, not the ADR
+
+One ADR produces several events with different targets. ADR 0002 has one consequence for refunds
+(`#13`, `#32`), one for peak-band classification (`#35`), one for backfilled days (`#29`). Proposing
+"ADR 0002 → #29" with the whole ADR as the summary makes the planner of #29 reread the ADR and
+guess which part applies. Proposing "consequence 5 of ADR 0002 → #29" with the bullet as the
+summary is what they actually need.
+
+## Format
+
+````markdown
+---
+id: 0002
+title: Store rides at per-trip grain, price them at rollup
+status: accepted            # proposed | accepted | superseded | deprecated
+date: 2026-09-08
+supersedes: []              # ["adr:0001"], or one consequence: ["adr:0001#refund-grain"]
+areas: [rides, fares, rollup]
+# no-propagation: true           # only when no consequence binds another issue or area
+# no-propagation-reason: "..."
+---
+
+## Context
+(prose, unchanged)
+
+## Decision
+(prose, unchanged)
+
+## Consequences
+
+```yaml
+- id: volume
+  text: ~40,000 rides per dock per year. Trivial for any engine; rollups can be rebuilt.
+
+- id: reprice
+  text: Re-pricing any period against any fare plan is the same function with a different rate set.
+  affects: [area:rollup]
+
+- id: dst
+  text: Local days have 23, 24 or 25 hours; `hours_expected` on `daily_summary` carries that.
+  affects: ["#27"]
+
+- id: backfill-grain
+  text: Backfilled days from the logbook remain daily-grain with a pre-computed split, marked
+    `source='logbook-backfill'`, and are never re-priced as if recorded per trip.
+  affects: ["#29", "#30"]
+
+- id: refund-grain
+  text: Refunds carry a `grain` column. A `year`-grain row must not be spread across months.
+  affects: ["#13", "#32"]
+
+- id: band-windows
+  text: "`peak_band` windows never wrap midnight; a crossing window is stored as two rows."
+  affects: ["#35", "#31"]
+```
+````
+
+Consequences are a YAML list inside a fenced `yaml` block; `adr migrate` writes that
+form. An unfenced list of the same shape also parses, but the fence keeps GitHub from rendering
+it as prose bullets. It is real YAML: a `text` that starts with a backtick or other YAML
+indicator must be quoted.
+
+Fields per consequence:
+
+| Field | Required | Meaning |
+|---|---|---|
+| `id` | yes | stable slug; the event's `detail` anchor is `docs/adr/0002-*.md#refund-grain` |
+| `text` | yes | the consequence, one to three sentences. Becomes the event summary verbatim |
+| `affects` | no | issue refs → events born `pending`; area refs → proposals for open issues in the area |
+| `kind` | no | `decision` (default), `scope`, `supersede` |
+
+A consequence with no `affects` produces no event unless the ADR's `areas` list matches an open
+issue, in which case it is proposed at low confidence. This is deliberate: a consequence the
+author could not attach to anything is either general knowledge or not yet actionable.
+
+## What changes for `propose adr:`
+
+| Input | Born as | Reason recorded |
+|---|---|---|
+| consequence `affects: ["#N"]` | pending | `affects` |
+| consequence `affects: [area:x]` → open issues in x | proposed | `area` |
+| ADR `areas:` ∩ open issues, consequence without `affects` | proposed | `adr-area` |
+| `#N` mentioned in consequence text, not in `affects` | proposed | `mentions` |
+| ADR `supersedes: [adr:M]` → issues that acknowledged any event from `adr:M` | pending, kind `supersede` | `supersedes` |
+| ADR `supersedes: [adr:M#id]` → issues that acknowledged an event from consequence `id` of `adr:M` | pending, kind `supersede` | `supersedes` |
+| `status` changed to `deprecated` | pending, kind `supersede`, to every acknowledger | `deprecated` |
+
+Editing a consequence's `text` changes the summary hash, so the next `propose` writes new events
+by the rules above: `pending` for `affects` issues, `proposed` for area and mention targets. The
+old events keep their status; a new `pending` event on a planned issue makes it stale. Editing
+anything else re-raises nothing.
+
+## Superseding part of an ADR
+
+A decision sometimes replaces one consequence of an earlier ADR while the rest still stands.
+Name that consequence instead of the whole ADR:
+
+```yaml
+supersedes: ["adr:0003#postgres-over-sqlite"]
+```
+
+`perturb propose` then raises `supersede` events only to the issues that acknowledged an event from
+that consequence; issues that absorbed the ADR's other consequences hear nothing. The earlier ADR
+keeps `status: accepted`, since most of it is still in force. Supersede a whole ADR with
+`supersedes: ["adr:0003"]`, and give the old ADR `status: superseded` and `superseded_by`.
+
+## Migration for existing ADRs
+
+A one-off `perturb adr migrate docs/adr/0002-*.md`:
+
+1. Parse the title line, status line and date.
+2. Carry a `**Supersedes:**` line into `supersedes` when it names only whole ADRs
+   (`**Supersedes:** [ADR 0003](0003-x.md) and ADR 4`). Any other Supersedes line, such as "the
+   storage half of ADR 0003", stays in the body with a warning; write the matching
+   `adr:0003#<consequence-id>` entry by hand.
+3. Keep any prose between the status line and the first heading at the top of the body. An
+   annotation on the status line itself is reported as a warning.
+4. Split the existing Consequences bullets into entries with generated ids from the first
+   noun phrase; the author renames them.
+5. Extract `#NNN` mentions in each bullet into that entry's `affects`, so nothing already in
+   prose is lost.
+6. Write the file back; the author reviews the diff and the warnings, fills `areas`, and runs
+   `perturb propose`.
+
+## Validation in `perturb check`
+
+- front-matter `id` matches the filename number;
+- every `affects` ref resolves (issue exists, area is declared);
+- every consequence `id` is unique within the ADR;
+- `status: superseded` has a `superseded_by` entry, and that ADR lists it in `supersedes`;
+- every `supersedes` entry is `adr:NNNN` or `adr:NNNN#id`, the ADR exists, and so does the named
+  consequence;
+- an ADR with `status: accepted` has at least one event, in any status, whose source is `adr:NNNN`
+  or `adr:NNNN#<consequence>`, or it carries `no-propagation: true` (a YAML boolean) with a
+  non-empty `no-propagation-reason`. `no-propagation: true` without a reason is itself a finding.

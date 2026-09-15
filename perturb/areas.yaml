@@ -1,0 +1,39 @@
+# Declared areas for perturb. Hand-edited, never inferred.
+# Globs are matched against cycle `files` and friction/commit file lists to route
+# findings and ADR consequences to open issues. See docs/design/02-model.md (edges
+# `touches`, `in_area`) and docs/configuration.md (this file's shape). Keep under ten.
+areas:
+  ledger:
+    paths:
+      - "src/perturb/events.py"
+      - "src/perturb/transitions.py"
+      - "src/perturb/push.py"
+      - "src/perturb/ack.py"
+      - "src/perturb/stale.py"
+      - "src/perturb/inbox.py"
+  proposals:
+    paths:
+      - "src/perturb/propose.py"
+      - "src/perturb/adr.py"
+      - "src/perturb/check.py"
+  graph:
+    paths:
+      - "src/perturb/graph.py"
+      - "src/perturb/graph_export.py"
+      - "src/perturb/sync.py"
+      - "src/perturb/github.py"
+      - "src/perturb/queue.py"
+      - "src/perturb/show.py"
+      - "src/perturb/refs.py"
+  areas:
+    paths:
+      - "src/perturb/areas.py"        # created by #46
+      - "perturb/areas.yaml"
+  cli:
+    paths:
+      - "src/perturb/cli.py"
+      - "src/perturb/envelope.py"
+  planning:
+    paths:
+      - "docs/**"
+      - "skills/**"

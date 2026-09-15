@@ -1,0 +1,12 @@
+{
+  "name": "perturb",
+  "owner": { "name": "geuben" },
+  "description": "The perturb agent skill, from the perturb repository",
+  "plugins": [
+    {
+      "name": "perturb",
+      "source": "./",
+      "description": "Answer questions about perturb's planning ledger and issue graph with its read verbs"
+    }
+  ]
+}

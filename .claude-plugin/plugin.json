@@ -1,0 +1,8 @@
+{
+  "name": "perturb",
+  "description": "Answer questions about perturb's planning ledger and issue graph with its read verbs",
+  "version": "0.0.1",
+  "author": { "name": "geuben" },
+  "repository": "https://github.com/geuben/perturb",
+  "license": "MIT"
+}
