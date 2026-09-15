@@ -11,4 +11,11 @@ summary: '**`**Supersedes:**` lines keep requiring the `ADR` prefix.** `_whole_a
 detail: tasks/adr-amends.md#deliberate-scope-cuts-do-not-build
 proposed_by: geuben
 reason: mentions
-status: pending
+status: acknowledged
+ack:
+  at: '2026-09-15T22:48:15Z'
+  by: geuben
+  plan: tasks/supersedes-ref-grammar.md
+  plan_blob: 1b372681414308749023f12d4dfd02ccb9779038
+  note: 'Absorbed as design decision 1: Supersedes lines accept bare ADR numbers;
+    the #3 status-line parser stays separate (scope cut, tracked on #3)'
