@@ -1686,6 +1686,16 @@ def test_adr_migrate_warns_about_a_supersedes_line_it_cannot_carry(tmp_path, cap
     assert "the storage engine half of" in path.read_text()
 
 
+def test_adr_migrate_leaves_the_file_untouched_when_the_result_does_not_parse(tmp_path, capsys):
+    path = tmp_path / "0009-no-status.md"
+    original = "# ADR 0009 — No status line\n\n## Context\n\nProse.\n\n## Consequences\n\n- A.\n"
+    path.write_text(original)
+    rc = main(["adr", "migrate", str(path), "--json"])
+    envelope = json.loads(capsys.readouterr().out)
+    assert (rc, envelope["ok"], envelope["reason"]) == (1, False, "missing_field")
+    assert path.read_text() == original
+
+
 def _all_parsers(parser):
     yield parser
     for action in parser._actions:

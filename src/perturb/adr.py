@@ -38,6 +38,10 @@ class Adr:
 _SUPERSEDES_REF = re.compile(r"adr:(\d+)(?:#([A-Za-z0-9][\w.-]*))?")
 _PROSE_ADR_REF = re.compile(r"\bADR[\s:-]*(\d+)", re.IGNORECASE)
 _MARKDOWN_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+_MARKDOWN_LINK_TARGET = re.compile(r"\[([^\]]*)\]\(([^)]*)\)")
+_ISSUE_URL = re.compile(r"/issues/\d+")
+_PULL_REQUEST_BEFORE = re.compile(r"\b(?:PR|pull request)\s*$", re.IGNORECASE)
+_TITLE_PREFIX = re.compile(r"^ADR[\s-]*\d+\s*[:—–-]\s*", re.IGNORECASE)
 _STATUS_SEPARATORS = " \t·•|,;—–-"
 
 
@@ -75,8 +79,7 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
     for i, line in enumerate(lines):
         if line.startswith("# "):
             raw = line[2:].strip()
-            raw = re.sub(r"^ADR\s+\d+\s*[—–-]\s*", "", raw)
-            title = raw
+            title = _TITLE_PREFIX.sub("", raw)
             carried.add(i)
             break
 
@@ -87,6 +90,13 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
         if "**Status:**" in line:
             carried.add(i)
             rest = line.split("**Status:**", 1)[1]
+            # A long status line wraps; its continuation lines are part of the annotation.
+            for j in range(i + 1, first_heading):
+                follow = lines[j]
+                if not follow.strip() or follow.startswith(("#", ">", "**")):
+                    break
+                carried.add(j)
+                rest += " " + follow.strip()
             m_status = re.match(r"\s*([A-Za-z]+)", rest)
             if m_status:
                 status = m_status.group(1).lower()
@@ -151,7 +161,7 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
     entries = []
     seen_slugs: dict[str, int] = {}
     for bullet_text in bullets:
-        affects = list(dict.fromkeys(f"#{m}" for m in re.findall(r"#(\d+)", bullet_text)))
+        affects = _issue_refs(bullet_text)
         slug = _consequence_slug(bullet_text)
         if slug in seen_slugs:
             seen_slugs[slug] += 1
@@ -164,7 +174,7 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
         entries.append(entry)
 
     fm = (
-        f"---\nid: {adr_id}\ntitle: {title}\nstatus: {status}\n"
+        f"---\nid: {adr_id}\ntitle: {json.dumps(title, ensure_ascii=False)}\nstatus: {status}\n"
         f"date: {date}\nsupersedes: {json.dumps(supersedes)}\nareas: []\n---\n"
     )
     body = "\n".join(body_lines).rstrip("\n") + "\n" if body_lines else ""
@@ -190,11 +200,27 @@ def _parse_prose_bullets(lines: list[str]) -> list[str]:
             if current:
                 bullets.append(" ".join(current))
                 current = []
-        elif current:
+        else:
+            # A line outside a bullet starts a paragraph: prose consequences are consequences too.
             current.append(line.strip())
     if current:
         bullets.append(" ".join(current))
     return bullets
+
+
+def _issue_refs(text: str) -> list[str]:
+    """The `#N` refs in a prose consequence that name issues. A ref inside a link that points
+    somewhere other than an issue (`[Risk #9](../hardware.md#risks)`) is not one, and neither is
+    a pull request (`PR #93`)."""
+    scrubbed = _MARKDOWN_LINK_TARGET.sub(
+        lambda m: m.group(1) if _ISSUE_URL.search(m.group(2)) else "", text
+    )
+    refs = [
+        f"#{m.group(1)}"
+        for m in re.finditer(r"#(\d+)", scrubbed)
+        if not _PULL_REQUEST_BEFORE.search(scrubbed[: m.start()])
+    ]
+    return list(dict.fromkeys(refs))
 
 
 def _consequence_slug(text: str) -> str:

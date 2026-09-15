@@ -1235,16 +1235,17 @@ def main(argv: list[str] | None = None, *, transport=None, root=None, repo_root=
 
             def _adr_migrate_handler(warn):
                 text = file_path.read_text()
+                from perturb.adr import parse_adr
+
                 try:
                     result, migrate_warnings = migrate_adr(text, adr_id=adr_id)
+                    # Parse before writing: a result that doesn't parse must not replace the ADR.
+                    adr_obj = parse_adr(result)
                 except AdrError as exc:
                     raise Refusal(exc.reason, exc.detail) from exc
                 file_path.write_text(result)
                 for warning in migrate_warnings:
                     warn(warning)
-                from perturb.adr import parse_adr
-
-                adr_obj = parse_adr(result)
                 return {"path": str(file_path), "consequences": len(adr_obj.consequences)}
 
             return dispatch(

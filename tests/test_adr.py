@@ -264,6 +264,93 @@ def test_migrate_roundtrips_through_parser():
     )
 
 
+def test_migrate_strips_a_hyphen_and_colon_adr_prefix_from_the_title():
+    text = (
+        "# ADR-0021: Render at the display's resolution\n\n"
+        "**Status:** Accepted · 2026-09-10\n\n"
+        "## Context\n\nPROSE.\n\n## Consequences\n\n- X happens.\n"
+    )
+    result, _warnings = migrate_adr(text, adr_id=21)
+    assert parse_adr(result).title == "Render at the display's resolution"
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Rollback: A/B slots with a health gate",
+        "'quoted' start",
+        "#1 priority - ship it",
+        "yes",
+    ],
+)
+def test_migrate_title_survives_yaml_special_characters(title):
+    text = (
+        f"# ADR 0008 — {title}\n\n"
+        "**Status:** accepted · 2026-09-10\n\n"
+        "## Context\n\nPROSE.\n\n## Consequences\n\n- X happens.\n"
+    )
+    result, _warnings = migrate_adr(text, adr_id=8)
+    assert parse_adr(result).title == title
+
+
+def test_migrate_treats_a_wrapped_status_line_as_one_annotation():
+    text = (
+        "# ADR 0021 — Render at the display's resolution\n\n"
+        "**Status:** Accepted · 2026-09-10 · amends [ADR-0002](0002-slint.md)'s\n"
+        '"2560x720 on VideoCore IV" premise · extended to physical geometry by\n'
+        "[0022](0022-panel-geometry.md)\n\n"
+        "> A preamble quote.\n\n"
+        "## Context\n\nPROSE.\n\n## Consequences\n\n- X happens.\n"
+    )
+    result, warnings = migrate_adr(text, adr_id=21)
+    preamble = result.split("## Context")[0]
+    assert "premise" not in preamble
+    assert "0022-panel-geometry.md" not in preamble
+    assert "> A preamble quote." in preamble
+    assert len(warnings) == 1
+    assert "2560x720 on VideoCore IV" in warnings[0] and "0022-panel-geometry.md" in warnings[0]
+    assert parse_adr(result).status == "accepted"
+
+
+@pytest.mark.parametrize(
+    "bullet, affects",
+    [
+        ("Recorded in [Risk #9](../hardware.md#known-risks).", []),
+        ("The divider change needed a rebuild (PR #93).", []),
+        ("Tightened in pull request #93, tracked by #84.", ["#84"]),
+        ("Tracked by [#13](https://github.com/x/y/issues/13).", ["#13"]),
+        ("See [the follow-up, #40](https://github.com/x/y/issues/40).", ["#40"]),
+    ],
+)
+def test_migrate_only_extracts_refs_that_name_issues(bullet, affects):
+    text = (
+        "# ADR 0021 — Resolution\n\n"
+        "**Status:** accepted · 2026-09-10\n\n"
+        f"## Context\n\nPROSE.\n\n## Consequences\n\n- {bullet}\n"
+    )
+    adr = parse_adr(migrate_adr(text, adr_id=21)[0])
+    assert adr.consequences[0].affects == affects
+
+
+def test_migrate_reads_each_consequence_paragraph_as_a_consequence():
+    text = (
+        "# ADR 0015 — Validated config\n\n"
+        "**Status:** accepted · 2026-09-09\n\n"
+        "## Context\n\nPROSE.\n\n## Consequences\n\n"
+        "**Gains.** Bad config is caught\non the development machine.\n\n"
+        "**Costs, accepted.** A fallback theme has to exist, tracked by #40.\n\n"
+        "- A trailing bullet.\n"
+        "- Another bullet.\n"
+    )
+    adr = parse_adr(migrate_adr(text, adr_id=15)[0])
+    assert [(c.text, c.affects) for c in adr.consequences] == [
+        ("**Gains.** Bad config is caught on the development machine.", []),
+        ("**Costs, accepted.** A fallback theme has to exist, tracked by #40.", ["#40"]),
+        ("A trailing bullet.", []),
+        ("Another bullet.", []),
+    ]
+
+
 def test_absent_frontmatter_raises():
     text = "## Context\n\nNo front-matter here.\n"
     with pytest.raises(AdrError):
