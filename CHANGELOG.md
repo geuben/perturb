@@ -6,6 +6,8 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.1] - 2026-09-15
+
 First public release. perturb was developed privately under the name `planner`; nothing was
 published under that name. Repositories that used a private build need these changes:
 
