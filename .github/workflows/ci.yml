@@ -4,6 +4,14 @@ on:
   push:
     branches: [main]
   pull_request:
+    # A PR that only adds plans or ledger events changes nothing these jobs test.
+    # perturb-check.yml still runs on it, since plans and events are what it checks.
+    # tasks/README.md is re-included because the link check covers it.
+    paths:
+      - "**"
+      - "!tasks/**"
+      - "!perturb/events/**"
+      - "tasks/README.md"
 
 permissions:
   contents: read
