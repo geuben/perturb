@@ -254,6 +254,13 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
             continue
         verb = m.group(1).lower().replace("-", " ")
         named = m.group(2).strip()
+        continuation_indices: list[int] = []
+        for j in range(i + 1, first_heading):
+            follow = lines[j]
+            if not follow.strip() or follow.startswith((">", "**")):
+                break
+            continuation_indices.append(j)
+            named += " " + follow.strip()
         numbers = _whole_adr_numbers(named)
         if numbers is not None:
             refs = [f"adr:{n:04d}" for n in numbers]
@@ -262,6 +269,8 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
             else:
                 amended_by_from_body.extend(r for r in refs if r not in amended_by_from_body)
             carried.add(i)
+            for j in continuation_indices:
+                carried.add(j)
 
     preamble = [line for i, line in enumerate(lines[:first_heading]) if i not in carried]
     while preamble and not preamble[0].strip():
