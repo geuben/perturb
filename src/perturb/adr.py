@@ -49,6 +49,10 @@ _STATUS_SEPARATORS = " \t·•|,;—–-"
 _SL_SEGMENT_SEP = re.compile(r"[·•|;]")
 _SL_REASON_SEP = re.compile(r" [—–] |: ")
 _SL_ADR_MATCH = re.compile(r"(?:ADR[\s:-]*)?\b(\d+)\b", re.IGNORECASE)
+_RELATION_LABEL = re.compile(
+    r"^\*\*(amends|extends|amended[ -]by|extended[ -]by):\*\*\s*(.*)",
+    re.IGNORECASE,
+)
 _SL_AMENDS_VERB = re.compile(r"^(?:amends|extends)\s+", re.IGNORECASE)
 _SL_AMENDED_WORD = re.compile(r"\b(?:amended|extended)\b", re.IGNORECASE)
 _SL_BY_WORD = re.compile(r"\bby\b", re.IGNORECASE)
@@ -241,6 +245,24 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
             )
         break
 
+    # Carry **Amends:** / **Extends:** / **Amended by:** / **Extended by:** lines
+    amends_from_body: list[str] = []
+    amended_by_from_body: list[str] = []
+    for i, line in enumerate(lines[:first_heading]):
+        m = _RELATION_LABEL.match(line)
+        if not m:
+            continue
+        verb = m.group(1).lower().replace("-", " ")
+        named = m.group(2).strip()
+        numbers = _whole_adr_numbers(named)
+        if numbers is not None:
+            refs = [f"adr:{n:04d}" for n in numbers]
+            if verb in ("amends", "extends"):
+                amends_from_body.extend(r for r in refs if r not in amends_from_body)
+            else:
+                amended_by_from_body.extend(r for r in refs if r not in amended_by_from_body)
+            carried.add(i)
+
     preamble = [line for i, line in enumerate(lines[:first_heading]) if i not in carried]
     while preamble and not preamble[0].strip():
         preamble.pop(0)
@@ -283,11 +305,13 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
             entry["affects"] = affects
         entries.append(entry)
 
+    amends_out = amends_from_status + amends_from_body
+    amended_by_out = amended_by_from_status + amended_by_from_body
     fm = (
         f"---\nid: {adr_id}\ntitle: {json.dumps(title, ensure_ascii=False)}\nstatus: {status}\n"
         f"date: {date}\nsupersedes: {json.dumps(supersedes)}\n"
-        f"amends: {json.dumps(amends_from_status)}\n"
-        f"amended_by: {json.dumps(amended_by_from_status)}\nareas: []\n---\n"
+        f"amends: {json.dumps(amends_out)}\n"
+        f"amended_by: {json.dumps(amended_by_out)}\nareas: []\n---\n"
     )
     body = "\n".join(body_lines).rstrip("\n") + "\n" if body_lines else ""
     if preamble:
