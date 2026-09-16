@@ -416,6 +416,10 @@ def resolve_test_paths(plan_rel_path, *, runner, repo_root, warn=None):
     return {row["path"] for row in data["result"]["paths"]}
 
 
+def declared_paths(plan_text, plan_rel_path, *, runner, repo_root, warn=None):
+    raise NotImplementedError
+
+
 def plan_declares_test_ids(plan_text):
     parts = plan_text.split("---", 2)
     if len(parts) < 3:

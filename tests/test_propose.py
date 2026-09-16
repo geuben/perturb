@@ -10,6 +10,7 @@ from perturb.propose import (
     compute_candidates,
     compute_friction_candidates,
     compute_plan_candidates,
+    declared_paths,
     files_touched_outside,
     parse_audit_items,
     parse_friction_commits,
@@ -1648,6 +1649,51 @@ def test_amends_targets_the_amended_adrs_acknowledgers(amends, expected):
         (t, "amend", "amends", "pending", "adr:0002", "docs/adr/0002-per-trip.md", s)
         for t, s in expected
     ]
+
+
+def test_declared_paths_unions_contract_paths_and_resolved_test_paths():
+    import json
+    import types
+
+    plan_text = (
+        "---\n"
+        "cycles:\n"
+        "  - n: 1\n"
+        "    test: tests/test_propose.py::test_foo\n"
+        "    files: [src/a.py]\n"
+        "---\n"
+    )
+    envelope = {
+        "ok": True,
+        "envelope_version": 1,
+        "run": None,
+        "result": {
+            "plan": "tasks/my-plan.md",
+            "paths": [
+                {
+                    "cycle": 1,
+                    "field": "test",
+                    "id": "tests/test_propose.py::test_foo",
+                    "project": "perturb",
+                    "path": "tests/test_propose.py",
+                },
+            ],
+            "unresolved": [],
+        },
+        "next_action": {"verb": "done", "terminal": True},
+    }
+
+    def fake_runner(argv, capture_output=True, text=True, cwd=None):
+        return types.SimpleNamespace(returncode=0, stdout=json.dumps(envelope), stderr="")
+
+    result = declared_paths(
+        plan_text,
+        "tasks/my-plan.md",
+        runner=fake_runner,
+        repo_root="/repo",
+    )
+
+    assert result == {"src/a.py", "tests/test_propose.py"}
 
 
 def test_resolve_test_paths_warns_about_unresolved_ids():
