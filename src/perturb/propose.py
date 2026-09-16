@@ -550,12 +550,14 @@ def propose_friction(
     now=None,
     new_id=None,
     config=None,
+    warn=None,
 ):
     config = config or Config()
     repo_root = Path(repo_root)
     friction_rel_path = config.friction_log_path(slug)
     friction_path = repo_root / friction_rel_path
-    plan_path = repo_root / config.plan_path(slug)
+    plan_rel_path = config.plan_path(slug)
+    plan_path = repo_root / plan_rel_path
     if not friction_path.exists():
         raise Refusal("friction_log_not_found", f"no friction log at {friction_path}")
 
@@ -563,10 +565,12 @@ def propose_friction(
     shas = parse_friction_commits(log_text)
 
     plan_text = plan_path.read_text() if plan_path.exists() else ""
-    declared = read_declared_paths(plan_text)
+    decl = declared_paths(
+        plan_text, plan_rel_path, runner=runner, repo_root=repo_root, warn=warn
+    )
     source_number = parse_plan_closes(plan_text) or 0
 
-    touched_outside = files_touched_outside(shas, declared, runner=runner)
+    touched_outside = files_touched_outside(shas, decl, runner=runner)
     area_set = load_areas(repo_root / "perturb" / "areas.yaml")
 
     plan_areas_by_issue = _plan_areas_by_issue(repo_root, graph_issues)

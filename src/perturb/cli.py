@@ -897,6 +897,7 @@ def main(argv: list[str] | None = None, *, transport=None, root=None, repo_root=
                     runner=_transport.runner,
                     proposed_by=actor,
                     config=config,
+                    warn=warn,
                 )
                 if parsed.review:
                     store = EventStore(events_dir)
