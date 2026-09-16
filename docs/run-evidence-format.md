@@ -22,8 +22,10 @@ set in `perturb/config.yaml` ([configuration.md](configuration.md#config-perturb
 The plan's **declared files** are its `files` list. A plan that declares none makes every file its
 run touched count as outside the plan.
 
-> Optional: if you use tdd-cli, the file lists in its plan contract count as declared files too, so
-> `files` isn't needed. See [Using perturb with tdd-cli](tdd-cli.md#plans).
+> Optional: if you use tdd-cli, the file lists in its plan contract count as declared files too — as
+> do the test ids in `cycles[].test`, `cycles[].tests` and `cycles[].modifies_tests`, resolved to
+> paths via `tdd plan paths` (requires tdd-cli >= 0.11.0) — so `files` isn't needed. See
+> [Using perturb with tdd-cli](tdd-cli.md#plans).
 
 **Body sections** read by `perturb propose plan:<slug>`:
 

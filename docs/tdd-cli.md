@@ -15,10 +15,16 @@ leaves out, come from the contract as well as any `files:` list:
 |---|---|
 | `cycles[].files` | production files the cycle changes |
 | `cycles[].stub_expected` | files the cycle stubs before its failing test |
+| `cycles[].test` / `cycles[].tests` | test id(s) the cycle drives; resolved to paths and counted as declared |
+| `cycles[].modifies_tests` | existing test ids the cycle is authorised to change; resolved to paths and counted as declared |
 | `ancillary_files` | other paths the plan writes, such as docs and generated files |
 
+Test id resolution needs **tdd-cli >= 0.11.0** (which ships `tdd plan paths`). On an older version
+perturb warns and falls back to the text-only declared paths, so friction proposals may over-report
+test edits until tdd-cli is upgraded.
+
 Because a contract names its files per cycle, friction proposals flag only files the plan genuinely
-didn't expect. `perturb show plan:<slug>` lists them.
+didn't expect. `perturb show plan:<slug>` lists them, including resolved test files.
 
 ## Friction logs
 
