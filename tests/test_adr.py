@@ -590,6 +590,19 @@ def test_migrate_warns_with_the_status_segments_it_does_not_carry(annotation, ex
     assert warnings == expected_warnings
 
 
+def test_migrate_leaves_a_non_relation_label_line_alone():
+    line = "**Owner:** Alice"
+    text = (
+        "# ADR 0007 — Keep Postgres\n\n"
+        "**Status:** accepted · 2026-09-10\n"
+        f"{line}\n\n"
+        "## Context\n\nPROSE.\n\n## Consequences\n\n- X happens.\n"
+    )
+    result, warnings = migrate_adr(text, adr_id=7)
+    assert line in result.split("## Context")[0]
+    assert warnings == []
+
+
 def test_amends_and_amended_by_are_parsed():
     base = (
         "---\nid: 2\ntitle: A title\nstatus: accepted\ndate: 2026-09-08\n"
