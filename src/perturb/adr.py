@@ -1,7 +1,7 @@
 import datetime
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import yaml
 
@@ -33,6 +33,8 @@ class Adr:
     superseded_by: str | None = None
     no_propagation: bool = False
     no_propagation_reason: str | None = None
+    amends: list = field(default_factory=list)
+    amended_by: list = field(default_factory=list)
 
 
 _SUPERSEDES_REF = re.compile(r"adr:(\d+)(?:#([A-Za-z0-9][\w.-]*))?")

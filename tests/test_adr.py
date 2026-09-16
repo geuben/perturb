@@ -454,6 +454,31 @@ def test_no_propagation_flag_and_reason_are_parsed():
     assert outcome == expected
 
 
+def test_amends_and_amended_by_are_parsed():
+    base = (
+        "---\nid: 2\ntitle: A title\nstatus: accepted\ndate: 2026-09-08\n"
+        "{extra}"
+        "---\n\n## Consequences\n\n```yaml\n- id: v\n  text: ok.\n  kind: decision\n```\n"
+    )
+    cases = {
+        "absent": ("", ([], [])),
+        "both": (
+            'amends: ["adr:0008", "adr:0003#shape"]\namended_by: ["adr:0021"]\n',
+            (["adr:0008", "adr:0003#shape"], ["adr:0021"]),
+        ),
+        "string_amends": ("amends: adr:0008\n", (["adr:0008"], [])),
+        "string_amended_by": ("amended_by: adr:0021\n", ([], ["adr:0021"])),
+        "non_str_amends": ("amends: 42\n", ([42], [])),
+        "null_amends": ("amends: null\n", ([], [])),
+    }
+    outcome = {}
+    for case, (extra_fm, _) in cases.items():
+        adr = parse_adr(base.format(extra=extra_fm))
+        outcome[case] = (adr.amends, adr.amended_by)
+    expected = {case: exp for case, (_, exp) in cases.items()}
+    assert outcome == expected
+
+
 def test_non_list_consequences_raises():
     text = (
         "---\nid: 2\ntitle: A title\nstatus: accepted\ndate: 2026-09-08\n---\n\n"
