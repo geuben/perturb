@@ -1652,13 +1652,7 @@ def test_amends_targets_the_amended_adrs_acknowledgers(amends, expected):
 
 
 def test_declared_paths_does_not_run_tdd_when_no_test_ids():
-    plan_text = (
-        "---\n"
-        "cycles:\n"
-        "  - n: 1\n"
-        "    files: [src/a.py]\n"
-        "---\n"
-    )
+    plan_text = "---\ncycles:\n  - n: 1\n    files: [src/a.py]\n---\n"
 
     def forbidden_runner(argv, **kwargs):
         raise AssertionError("tdd must not run")
@@ -1779,15 +1773,11 @@ def test_resolve_test_paths_warns_and_yields_nothing_when_tdd_unavailable():
 
     cases = [
         _make_runner(OSError("tdd not found")),
-        _make_runner(
-            types.SimpleNamespace(returncode=2, stdout="", stderr="argparse usage")
-        ),
+        _make_runner(types.SimpleNamespace(returncode=2, stdout="", stderr="argparse usage")),
         _make_runner(
             types.SimpleNamespace(
                 returncode=1,
-                stdout=json.dumps(
-                    {"ok": False, "error": "git rev-parse failed", "result": {}}
-                ),
+                stdout=json.dumps({"ok": False, "error": "git rev-parse failed", "result": {}}),
                 stderr="",
             )
         ),
@@ -1842,9 +1832,7 @@ def test_resolve_test_paths_runs_tdd_plan_paths_in_the_repo_root():
         return types.SimpleNamespace(returncode=0, stdout=json.dumps(envelope), stderr="")
 
     repo_root = "/repo"
-    result = resolve_test_paths(
-        "tasks/my-plan.md", runner=fake_runner, repo_root=repo_root
-    )
+    result = resolve_test_paths("tasks/my-plan.md", runner=fake_runner, repo_root=repo_root)
 
     assert result == {"tests/test_propose.py", "tests/test_show.py"}
     assert len(calls) == 1

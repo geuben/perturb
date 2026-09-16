@@ -423,9 +423,7 @@ def declared_paths(plan_text, plan_rel_path, *, runner, repo_root, warn=None):
     base = read_declared_paths(plan_text)
     if not plan_declares_test_ids(plan_text):
         return base
-    return base | resolve_test_paths(
-        plan_rel_path, runner=runner, repo_root=repo_root, warn=warn
-    )
+    return base | resolve_test_paths(plan_rel_path, runner=runner, repo_root=repo_root, warn=warn)
 
 
 def plan_declares_test_ids(plan_text):
@@ -568,9 +566,7 @@ def propose_friction(
     shas = parse_friction_commits(log_text)
 
     plan_text = plan_path.read_text() if plan_path.exists() else ""
-    decl = declared_paths(
-        plan_text, plan_rel_path, runner=runner, repo_root=repo_root, warn=warn
-    )
+    decl = declared_paths(plan_text, plan_rel_path, runner=runner, repo_root=repo_root, warn=warn)
     source_number = parse_plan_closes(plan_text) or 0
 
     touched_outside = files_touched_outside(shas, decl, runner=runner)
