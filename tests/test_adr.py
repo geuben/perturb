@@ -627,8 +627,8 @@ def test_migrate_carries_a_relation_line_with_a_reason_clause_and_warns():
                 [],
                 True,
                 [
-                    "**Amends:** line kept in body, reason clause not absorbed: (module boundary unchanged)"
-                ],  # noqa: E501
+                    "**Amends:** line kept in body, reason clause not absorbed: (module boundary unchanged)"  # noqa: E501
+                ],
             ),
         ),
         (
@@ -639,8 +639,8 @@ def test_migrate_carries_a_relation_line_with_a_reason_clause_and_warns():
                 ["adr:0009"],
                 True,
                 [
-                    "**Amended by:** line kept in body, reason clause not absorbed: — the tiers stand"
-                ],  # noqa: E501
+                    "**Amended by:** line kept in body, reason clause not absorbed: — the tiers stand"  # noqa: E501
+                ],
             ),
         ),
         (
