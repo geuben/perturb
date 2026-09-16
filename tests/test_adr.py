@@ -590,6 +590,50 @@ def test_migrate_warns_with_the_status_segments_it_does_not_carry(annotation, ex
     assert warnings == expected_warnings
 
 
+def test_migrate_carries_a_relation_line_with_a_reason_clause_and_warns():
+    rows = [
+        (
+            "**Amends:** [ADR-0003](0003-x.md) (module boundary unchanged)",
+            None,
+            (
+                ["adr:0003"], [], True,
+                ["**Amends:** line kept in body, reason clause not absorbed: (module boundary unchanged)"],  # noqa: E501
+            ),
+        ),
+        (
+            "**Amended by:** [ADR-0009](0009-y.md) — the tiers stand",
+            None,
+            (
+                [], ["adr:0009"], True,
+                ["**Amended by:** line kept in body, reason clause not absorbed: — the tiers stand"],  # noqa: E501
+            ),
+        ),
+        (
+            "**Amends:** [ADR-0003](0003-single-process.md) (module boundary unchanged;",
+            "the tiers stand)",
+            (
+                ["adr:0003"], [], True,
+                ["**Amends:** line kept in body, reason clause not absorbed:"
+                 " (module boundary unchanged; the tiers stand)"],
+            ),
+        ),
+    ]
+    for line, continuation, expected in rows:
+        body = f"{line}\n"
+        if continuation:
+            body += f"{continuation}\n"
+        text = (
+            "# ADR 0010 — Test\n\n"
+            "**Status:** accepted · 2026-09-10\n"
+            f"{body}\n"
+            "## Context\n\nPROSE.\n\n## Consequences\n\n- X happens.\n"
+        )
+        result, warnings = migrate_adr(text, adr_id=10)
+        adr = parse_adr(result)
+        actual = (adr.amends, adr.amended_by, line in result.split("## Context")[0], warnings)
+        assert actual == expected, f"row {line!r}: {actual!r} != {expected!r}"
+
+
 def test_migrate_joins_a_wrapped_relation_line():
     text = (
         "# ADR 0011 — Test\n\n"
