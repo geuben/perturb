@@ -4,6 +4,7 @@ from perturb.adr import (
     Adr,
     AdrError,
     Consequence,
+    classify_adr_filename,
     migrate_adr,
     parse_adr,
     parse_supersedes_ref,
@@ -559,3 +560,28 @@ def test_non_list_consequences_raises():
     )
     with pytest.raises(AdrError):
         parse_adr(text)
+
+
+def test_adr_filenames_are_classified_by_what_propose_can_resolve():
+    adr_cases = [
+        ("0002-per-trip.md", ("adr", 2)),
+        ("0021-render.md", ("adr", 21)),
+        ("12345-big.md", ("adr", 12345)),
+        ("0002-.md", ("adr", 2)),
+        ("0000-template.md", ("adr", 0)),
+    ]
+    near_miss_cases = [
+        ("2-x.md", ("near_miss", 2)),
+        ("0002_x.md", ("near_miss", 2)),
+        ("00002-x.md", ("near_miss", 2)),
+        ("0002.md", ("near_miss", 2)),
+        ("0002x.md", ("near_miss", 2)),
+    ]
+    other_cases = [
+        ("README.md", ("other", None)),
+        ("index.md", ("other", None)),
+        ("template.md", ("other", None)),
+        ("adr-0002-x.md", ("other", None)),
+    ]
+    for name, expected in adr_cases + near_miss_cases + other_cases:
+        assert classify_adr_filename(name) == expected, f"{name!r}"

@@ -421,11 +421,31 @@ def test_resolve_adr_path_globs_and_refuses_when_absent(tmp_path):
     path = resolve_adr_path(tmp_path, "0002")
     assert path.name == "0002-per-trip.md"
 
-    import pytest
-
     with pytest.raises(Refusal) as exc_info:
         resolve_adr_path(tmp_path, "0009")
     assert exc_info.value.reason == "adr_not_found"
+
+
+@pytest.mark.parametrize(
+    "names, expected",
+    [
+        (["0002-x.md", "README.md"], "0002-x.md"),
+        (["0002-a.md", "0002-b.md"], "adr_ambiguous"),
+        (["00002-x.md"], "adr_not_found"),
+        (["2-x.md"], "adr_not_found"),
+        (["0002_x.md"], "adr_not_found"),
+    ],
+)
+def test_resolve_adr_path_finds_only_the_padded_name(tmp_path, names, expected):
+    adr_dir = tmp_path / "docs" / "adr"
+    adr_dir.mkdir(parents=True)
+    for name in names:
+        (adr_dir / name).write_text("# placeholder")
+    try:
+        outcome = resolve_adr_path(tmp_path, "2").name
+    except Refusal as exc:
+        outcome = exc.reason
+    assert outcome == expected
 
 
 # --- friction propose tests ---

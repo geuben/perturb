@@ -381,3 +381,31 @@ def test_an_amended_by_entry_that_names_no_adr_is_a_finding(tmp_path, entry):
     (adr_dir / "0005-new.md").write_text(_adr(5, "accepted"))
     findings = [(f["kind"], f["ref"]) for f in adr_findings(adr_dir, {"issues": {}})]
     assert findings == [("amended_by_unresolved", entry)]
+
+
+def test_check_reads_only_adr_named_files(tmp_path):
+    adr_dir = tmp_path / "docs" / "adr"
+    adr_dir.mkdir(parents=True)
+    (adr_dir / "0002-x.md").write_text(
+        _adr(2, "accepted", "no-propagation: true\nno-propagation-reason: prose only\n")
+    )
+    (adr_dir / "README.md").write_text(
+        "# ADRs\n\n| ADR | Status |\n|---|---|\n| [0002](0002-x.md) | accepted |\n"
+    )
+    (adr_dir / "template.md").write_text(_adr(0, "accepted"))
+    assert (
+        [(f["kind"], f["ref"]) for f in adr_findings(adr_dir, {"issues": {}})],
+        [(f["kind"], f["ref"]) for f in unpropagated_adr_findings(adr_dir, [])],
+    ) == ([], [])
+
+
+def test_a_near_miss_adr_filename_is_a_finding(tmp_path):
+    near_miss_names = ["2-x.md", "0002_x.md", "00002-x.md", "0002.md"]
+    for name in near_miss_names:
+        adr_dir = tmp_path / name / "docs" / "adr"
+        adr_dir.mkdir(parents=True)
+        (adr_dir / name).write_text(
+            _adr(2, "accepted", "no-propagation: true\nno-propagation-reason: prose only\n")
+        )
+        result = [(f["kind"], f["ref"]) for f in adr_findings(adr_dir, {"issues": {}})]
+        assert result == [("adr_filename", name)], f"name={name!r}: got {result!r}"

@@ -24,6 +24,9 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **`perturb check` no longer fails on an index `README.md` in `docs/adr`.** Only files named
+  `NNNN-<title>.md` are now treated as ADRs; other Markdown in that directory is ignored.
+
 - **`perturb adr migrate` deleted consequences written as paragraphs.** Only `- ` bullets were
   carried; a Consequences section of prose paragraphs (`**Gains.** …`) was rewritten as an empty
   list. Each paragraph is now a consequence, like each bullet.

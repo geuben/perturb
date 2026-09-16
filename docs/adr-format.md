@@ -164,6 +164,11 @@ A one-off `perturb adr migrate docs/adr/0002-*.md`:
 
 ## Validation in `perturb check`
 
+An ADR is a file in `docs/adr` named `NNNN-<title>.md` — the name `perturb propose adr:` can
+resolve. Other Markdown in that directory (an index `README.md`, a template, etc.) is ignored.
+
+- **`adr_filename`** — a Markdown file in `docs/adr` whose name starts with digits but is not
+  `NNNN-<title>.md` (e.g. `2-x.md`, `0002_x.md`). Rename it to `NNNN-<title>.md`.
 - front-matter `id` matches the filename number;
 - every `affects` ref resolves (issue exists, area is declared);
 - every consequence `id` is unique within the ADR;
