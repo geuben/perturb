@@ -84,7 +84,7 @@ def _parse_status_relations(annotation: str) -> tuple[list[str], list[str]]:
             continue
         m = _SL_AMENDS_VERB.match(seg)
         if m:
-            rest = seg[m.end():]
+            rest = seg[m.end() :]
             text = _SL_REASON_SEP.split(rest, maxsplit=1)[0]
             numbers = _whole_status_refs(text)
             if numbers is not None:
@@ -98,7 +98,7 @@ def _parse_status_relations(annotation: str) -> tuple[list[str], list[str]]:
             for m_by in _SL_BY_WORD.finditer(seg):
                 last_by = m_by
             if last_by:
-                rest = seg[last_by.end():]
+                rest = seg[last_by.end() :]
                 text = _SL_REASON_SEP.split(rest, maxsplit=1)[0]
                 numbers = _whole_status_refs(text)
                 if numbers is not None:
@@ -118,7 +118,7 @@ def _status_warning_segments(annotation: str) -> list[str]:
             continue
         m = _SL_AMENDS_VERB.match(seg)
         if m:
-            rest = seg[m.end():]
+            rest = seg[m.end() :]
             parts = _SL_REASON_SEP.split(rest, maxsplit=1)
             text = parts[0]
             has_reason = len(parts) > 1
@@ -145,7 +145,7 @@ def _status_warning_segments(annotation: str) -> list[str]:
             if last_by:
                 before_by = seg[: last_by.start()].strip()
                 if re.fullmatch(r"(?:amended|extended)", before_by, re.IGNORECASE):
-                    rest = seg[last_by.end():]
+                    rest = seg[last_by.end() :]
                     text = _SL_REASON_SEP.split(rest, maxsplit=1)[0]
                     numbers = _whole_status_refs(text)
                     if numbers is not None:
@@ -355,7 +355,9 @@ def parse_adr(text: str) -> Adr:
 
     for required_field in ("id", "title", "status", "date"):
         if fm.get(required_field) is None:
-            raise AdrError("missing_field", f"required front-matter field '{required_field}' is absent")  # noqa: E501
+            raise AdrError(
+                "missing_field", f"required front-matter field '{required_field}' is absent"
+            )  # noqa: E501
 
     date_val = fm.get("date")
     if isinstance(date_val, datetime.date):

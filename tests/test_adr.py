@@ -505,12 +505,18 @@ _P = "status line annotation not carried into the front-matter: "
         ("resolution premise amended by 0021", [_P + "resolution premise amended by 0021"]),
         (
             "amends [ADR-0008](0008-shape.md) — an integration no longer solely owns the presented shape",  # noqa: E501
-            [_P + "amends [ADR-0008](0008-shape.md) — an integration no longer solely owns the presented shape"],  # noqa: E501
+            [
+                _P
+                + "amends [ADR-0008](0008-shape.md) — an integration no longer solely owns the presented shape"  # noqa: E501
+            ],
         ),
         ("amends ADR 0008 \xb7 reviewed quarterly", [_P + "reviewed quarterly"]),
         (
             "amends ADR-0002's premise",
-            [_P + 'amends ADR-0002\'s premise. To amend one consequence, add amends: ["adr:0002#<consequence-id>"]'],  # noqa: E501
+            [
+                _P
+                + 'amends ADR-0002\'s premise. To amend one consequence, add amends: ["adr:0002#<consequence-id>"]'  # noqa: E501
+            ],
         ),
         ("storage engine superseded by ADR 0005", [_P + "storage engine superseded by ADR 0005"]),
     ],
