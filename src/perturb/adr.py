@@ -321,4 +321,12 @@ def _parse_consequences(lines: list) -> list:
 
 
 def classify_adr_filename(name: str) -> tuple[str, int | None]:
-    return ("other", None)
+    m = re.match(r"^(\d+)(.*)\.(md)$", name)
+    if not m:
+        return ("other", None)
+    digits, rest, _ = m.group(1), m.group(2), m.group(3)
+    n = int(digits)
+    padded = f"{n:04d}"
+    if digits == padded and rest.startswith("-"):
+        return ("adr", n)
+    return ("near_miss", n)
