@@ -377,6 +377,11 @@ def parse_adr(text: str) -> Adr:
             return val
         return [val]
 
+    def _unwrap_one(val):
+        if isinstance(val, list):
+            return val[0] if len(val) == 1 else (None if len(val) == 0 else val)
+        return val
+
     return Adr(
         id=fm.get("id"),
         title=fm.get("title"),
@@ -385,7 +390,7 @@ def parse_adr(text: str) -> Adr:
         supersedes=_as_list(fm.get("supersedes")),
         areas=fm.get("areas") or [],
         consequences=consequences,
-        superseded_by=fm.get("superseded_by"),
+        superseded_by=_unwrap_one(fm.get("superseded_by")),
         no_propagation=fm.get("no-propagation") is True,
         no_propagation_reason=r if isinstance(r, str) else None,
         amends=_as_list(fm.get("amends")),
