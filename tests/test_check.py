@@ -149,12 +149,8 @@ def test_supersedes_a_malformed_entry_is_a_finding(tmp_path):
 def test_a_bare_string_supersedes_is_read_as_one_ref(tmp_path):
     adr_dir = tmp_path / "adr"
     adr_dir.mkdir()
-    (adr_dir / "0002-old.md").write_text(
-        _adr(2, "superseded", "superseded_by: adr:0005\n")
-    )
-    (adr_dir / "0005-new.md").write_text(
-        _adr(5, "accepted", "supersedes: adr:0002\n")
-    )
+    (adr_dir / "0002-old.md").write_text(_adr(2, "superseded", "superseded_by: adr:0005\n"))
+    (adr_dir / "0005-new.md").write_text(_adr(5, "accepted", "supersedes: adr:0002\n"))
     findings = [(f["kind"], f.get("ref")) for f in adr_findings(adr_dir, {"issues": {}})]
     assert findings == []
 
@@ -165,12 +161,8 @@ def test_supersede_backlink_accepts_equivalent_ref_spellings(tmp_path):
     for spelling in spellings:
         adr_dir = tmp_path / spelling.replace(":", "_").replace("#", "_")
         adr_dir.mkdir()
-        (adr_dir / "0002-old.md").write_text(
-            _adr(2, "superseded", "superseded_by: adr:0005\n")
-        )
-        (adr_dir / "0005-new.md").write_text(
-            _adr(5, "accepted", f'supersedes: ["{spelling}"]\n')
-        )
+        (adr_dir / "0002-old.md").write_text(_adr(2, "superseded", "superseded_by: adr:0005\n"))
+        (adr_dir / "0005-new.md").write_text(_adr(5, "accepted", f'supersedes: ["{spelling}"]\n'))
         findings = [f["kind"] for f in adr_findings(adr_dir, {"issues": {}})]
         results.append((spelling, findings))
     assert results == [(s, []) for s in spellings]
@@ -187,12 +179,8 @@ def test_an_unresolvable_superseded_by_is_a_finding(tmp_path):
             sb_line = f"superseded_by: {form}\n"
         else:
             sb_line = f"superseded_by: {form}\n"
-        (adr_dir / "0002-old.md").write_text(
-            _adr(2, "superseded", sb_line)
-        )
-        (adr_dir / "0005-new.md").write_text(
-            _adr(5, "accepted", 'supersedes: ["adr:0002"]\n')
-        )
+        (adr_dir / "0002-old.md").write_text(_adr(2, "superseded", sb_line))
+        (adr_dir / "0005-new.md").write_text(_adr(5, "accepted", 'supersedes: ["adr:0002"]\n'))
         kinds = [f["kind"] for f in adr_findings(adr_dir, {"issues": {}})]
         results.append((str(form), kinds))
     assert results == [(str(f), ["superseded_by_unresolved"]) for f in rejected_forms]
