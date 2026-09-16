@@ -6,6 +6,22 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **`amends` and `amended_by` front-matter keys** for Architecture Decision Records. An ADR that
+  amends an earlier one lists it in `amends: ["adr:NNNN"]` or `amends: ["adr:NNNN#consequence-id"]`;
+  the earlier ADR lists the amending ADR in `amended_by: ["adr:NNNN"]`. Both stay in force.
+- **`amend` event kind.** `perturb propose` raises `amend` events (via `push --kind amend` or from
+  `amends:` front-matter) to the issues that acknowledged events from the amended ADR or
+  consequence. `perturb push --kind amend` now accepted.
+- **Check findings for amends/amended_by symmetry:** `amends_invalid`, `amends_unresolved`,
+  `amended_by_unresolved`, `amend_backlink`, and `amended_by_missing` — analogous to the existing
+  supersedes findings.
+- **`perturb adr migrate` carries `amends`/`amended_by` from the status line.** Bare
+  `amends ADR NNNN`, `amended by ADR NNNN`, `extends ADR NNNN`, and list forms
+  (`amends ADR 4 and 0005`) are carried into front-matter; anchored refs and segments with
+  surrounding prose are reported as warnings so the author can verify what is lost.
+
 ### Fixed
 
 - **`perturb adr migrate` deleted consequences written as paragraphs.** Only `- ` bullets were

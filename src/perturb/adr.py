@@ -109,6 +109,53 @@ def _parse_status_relations(annotation: str) -> tuple[list[str], list[str]]:
     return amends_out, amended_by_out
 
 
+def _status_warning_segments(annotation: str) -> list[str]:
+    """Return annotation segments not fully carried into front-matter, with hints where useful."""
+    warn_segs = []
+    for seg in _SL_SEGMENT_SEP.split(annotation):
+        seg = seg.strip()
+        if not seg:
+            continue
+        m = _SL_AMENDS_VERB.match(seg)
+        if m:
+            rest = seg[m.end():]
+            parts = _SL_REASON_SEP.split(rest, maxsplit=1)
+            text = parts[0]
+            has_reason = len(parts) > 1
+            numbers = _whole_status_refs(text)
+            if numbers is not None and not has_reason:
+                continue
+            if numbers is None:
+                plain = _MARKDOWN_LINK.sub(r"\1", rest)
+                m_num = _SL_ADR_MATCH.search(plain)
+                if m_num:
+                    n = int(m_num.group(1))
+                    warn_segs.append(
+                        f'{seg}. To amend one consequence, add amends: ["adr:{n:04d}#<consequence-id>"]'
+                    )
+                else:
+                    warn_segs.append(seg)
+            else:
+                warn_segs.append(seg)
+            continue
+        if _SL_AMENDED_WORD.search(seg):
+            last_by = None
+            for m_by in _SL_BY_WORD.finditer(seg):
+                last_by = m_by
+            if last_by:
+                before_by = seg[: last_by.start()].strip()
+                if re.fullmatch(r"(?:amended|extended)", before_by, re.IGNORECASE):
+                    rest = seg[last_by.end():]
+                    text = _SL_REASON_SEP.split(rest, maxsplit=1)[0]
+                    numbers = _whole_status_refs(text)
+                    if numbers is not None:
+                        continue
+            warn_segs.append(seg)
+        else:
+            warn_segs.append(seg)
+    return warn_segs
+
+
 def _whole_adr_numbers(text: str) -> list[int] | None:
     """The ADR numbers a prose Supersedes line names, when it names nothing but whole ADRs."""
     plain = _MARKDOWN_LINK.sub(r"\1", text)
@@ -164,9 +211,12 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
             annotation = rest.strip(_STATUS_SEPARATORS)
             amends_from_status, amended_by_from_status = _parse_status_relations(annotation)
             if annotation:
-                warnings.append(
-                    f"status line annotation not carried into the front-matter: {annotation}"
-                )
+                warn_segs = _status_warning_segments(annotation)
+                if warn_segs:
+                    warnings.append(
+                        "status line annotation not carried into the front-matter: "
+                        + " \xb7 ".join(warn_segs)
+                    )
             break
 
     # Carry a **Supersedes:** line naming whole ADRs; keep any other in the body

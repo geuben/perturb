@@ -494,6 +494,33 @@ def test_migrate_carries_whole_adr_relations_from_the_status_line(annotation, re
     assert (adr.amends, adr.amended_by) == relations
 
 
+_P = "status line annotation not carried into the front-matter: "
+
+
+@pytest.mark.parametrize(
+    "annotation, expected_warnings",
+    [
+        ("amends ADR 0008", []),
+        ("amended by ADR 0021", []),
+        ("resolution premise amended by 0021", [_P + "resolution premise amended by 0021"]),
+        (
+            "amends [ADR-0008](0008-shape.md) — an integration no longer solely owns the presented shape",  # noqa: E501
+            [_P + "amends [ADR-0008](0008-shape.md) — an integration no longer solely owns the presented shape"],  # noqa: E501
+        ),
+        ("amends ADR 0008 \xb7 reviewed quarterly", [_P + "reviewed quarterly"]),
+        (
+            "amends ADR-0002's premise",
+            [_P + 'amends ADR-0002\'s premise. To amend one consequence, add amends: ["adr:0002#<consequence-id>"]'],  # noqa: E501
+        ),
+        ("storage engine superseded by ADR 0005", [_P + "storage engine superseded by ADR 0005"]),
+    ],
+)
+def test_migrate_warns_with_the_status_segments_it_does_not_carry(annotation, expected_warnings):
+    text = _MIGRATE_TMPL.format(annotation=annotation)
+    _, warnings = migrate_adr(text, adr_id=21)
+    assert warnings == expected_warnings
+
+
 def test_amends_and_amended_by_are_parsed():
     base = (
         "---\nid: 2\ntitle: A title\nstatus: accepted\ndate: 2026-09-08\n"
