@@ -327,3 +327,15 @@ def test_check_reads_only_adr_named_files(tmp_path):
         [(f["kind"], f["ref"]) for f in adr_findings(adr_dir, {"issues": {}})],
         [(f["kind"], f["ref"]) for f in unpropagated_adr_findings(adr_dir, [])],
     ) == ([], [])
+
+
+def test_a_near_miss_adr_filename_is_a_finding(tmp_path):
+    near_miss_names = ["2-x.md", "0002_x.md", "00002-x.md", "0002.md"]
+    for name in near_miss_names:
+        adr_dir = tmp_path / name / "docs" / "adr"
+        adr_dir.mkdir(parents=True)
+        (adr_dir / name).write_text(
+            _adr(2, "accepted", "no-propagation: true\nno-propagation-reason: prose only\n")
+        )
+        result = [(f["kind"], f["ref"]) for f in adr_findings(adr_dir, {"issues": {}})]
+        assert result == [("adr_filename", name)], f"name={name!r}: got {result!r}"
