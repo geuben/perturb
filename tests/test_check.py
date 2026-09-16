@@ -342,7 +342,7 @@ def test_amends_entries_are_validated_like_supersedes(tmp_path, entry, expected)
         ('amended_by: ["adr:5"]\n', 'amends: ["adr:3#v"]\n', []),
     ],
 )
-def test_amends_needs_the_earlier_adr_to_list_it_in_amended_by(tmp_path, old_extra, new_extra, expected):
+def test_amends_needs_the_earlier_adr_to_list_it_in_amended_by(tmp_path, old_extra, new_extra, expected):  # noqa: E501
     adr_dir = tmp_path / "adr"
     adr_dir.mkdir()
     (adr_dir / "0003-old.md").write_text(_adr(3, "accepted", old_extra))
