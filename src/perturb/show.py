@@ -4,10 +4,10 @@ import yaml
 
 from perturb.config import Config
 from perturb.envelope import Refusal
-from perturb.propose import read_declared_paths
+from perturb.propose import declared_paths, read_declared_paths
 
 
-def show(ref, *, graph_issues=None, repo_root=None, config=None):
+def show(ref, *, graph_issues=None, repo_root=None, config=None, runner=None, warn=None):
     if ref.kind == "issue":
         issue = (graph_issues or {}).get(str(ref.id))
         if issue is None:

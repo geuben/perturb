@@ -165,3 +165,51 @@ def test_show_plan_follows_a_custom_plan_pattern(tmp_path):
     with pytest.raises(Refusal) as exc_info:
         show(parse_ref("plan:q"), repo_root=tmp_path, config=config)
     assert exc_info.value.reason == "plan_not_found"
+
+
+def test_show_plan_lists_resolved_test_paths(tmp_path):
+    import json
+    import types
+
+    plan_text = (
+        "---\n"
+        "closes: 42\n"
+        "cycles:\n"
+        "  - n: 1\n"
+        "    test: tests/test_propose.py::test_foo\n"
+        "    files: [src/a.py]\n"
+        "---\n"
+    )
+    slug = "my-plan"
+    tasks = tmp_path / "tasks"
+    tasks.mkdir()
+    (tasks / f"{slug}.md").write_text(plan_text)
+
+    envelope = json.dumps(
+        {
+            "ok": True,
+            "envelope_version": 1,
+            "run": None,
+            "result": {
+                "plan": f"tasks/{slug}.md",
+                "paths": [
+                    {
+                        "cycle": 1,
+                        "field": "test",
+                        "id": "tests/test_propose.py::test_foo",
+                        "project": "perturb",
+                        "path": "tests/test_propose.py",
+                    }
+                ],
+                "unresolved": [],
+            },
+            "next_action": {"verb": "done", "terminal": True},
+        }
+    )
+
+    def fake_runner(argv, capture_output=True, text=True, cwd=None):
+        return types.SimpleNamespace(returncode=0, stdout=envelope, stderr="")
+
+    result = show(parse_ref(f"plan:{slug}"), repo_root=tmp_path, runner=fake_runner)
+    assert "tests/test_propose.py" in result["files"]
+    assert "src/a.py" in result["files"]
