@@ -623,25 +623,37 @@ def test_migrate_carries_a_relation_line_with_a_reason_clause_and_warns():
             "**Amends:** [ADR-0003](0003-x.md) (module boundary unchanged)",
             None,
             (
-                ["adr:0003"], [], True,
-                ["**Amends:** line kept in body, reason clause not absorbed: (module boundary unchanged)"],  # noqa: E501
+                ["adr:0003"],
+                [],
+                True,
+                [
+                    "**Amends:** line kept in body, reason clause not absorbed: (module boundary unchanged)"
+                ],  # noqa: E501
             ),
         ),
         (
             "**Amended by:** [ADR-0009](0009-y.md) — the tiers stand",
             None,
             (
-                [], ["adr:0009"], True,
-                ["**Amended by:** line kept in body, reason clause not absorbed: — the tiers stand"],  # noqa: E501
+                [],
+                ["adr:0009"],
+                True,
+                [
+                    "**Amended by:** line kept in body, reason clause not absorbed: — the tiers stand"
+                ],  # noqa: E501
             ),
         ),
         (
             "**Amends:** [ADR-0003](0003-single-process.md) (module boundary unchanged;",
             "the tiers stand)",
             (
-                ["adr:0003"], [], True,
-                ["**Amends:** line kept in body, reason clause not absorbed:"
-                 " (module boundary unchanged; the tiers stand)"],
+                ["adr:0003"],
+                [],
+                True,
+                [
+                    "**Amends:** line kept in body, reason clause not absorbed:"
+                    " (module boundary unchanged; the tiers stand)"
+                ],
             ),
         ),
     ]

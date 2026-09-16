@@ -268,10 +268,10 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
         named = m.group(2).strip()
         continuation, cont_indices = _join_continuation(lines, i, first_heading)
         named += continuation
-        label_text = line[:line.index(":**") + 3]
+        label_text = line[: line.index(":**") + 3]
         m_reason = _BODY_REASON_SEP.search(named)
-        head = named[:m_reason.start()] if m_reason else named
-        reason = named[m_reason.start():].strip() if m_reason else None
+        head = named[: m_reason.start()] if m_reason else named
+        reason = named[m_reason.start() :].strip() if m_reason else None
         numbers = _whole_adr_numbers(head)
         if numbers is None:
             if reason is None:
@@ -287,9 +287,7 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
         target = amends_from_body if verb in ("amends", "extends") else amended_by_from_body
         target.extend(r for r in refs if r not in target)
         if reason is not None:
-            warnings.append(
-                f"{label_text} line kept in body, reason clause not absorbed: {reason}"
-            )
+            warnings.append(f"{label_text} line kept in body, reason clause not absorbed: {reason}")
         else:
             carried.add(i)
             for j in cont_indices:
