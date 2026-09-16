@@ -174,7 +174,7 @@ resolve. Other Markdown in that directory (an index `README.md`, a template, etc
 - every consequence `id` is unique within the ADR;
 - `status: superseded` has a `superseded_by` entry, and that ADR lists it in `supersedes`;
 - every `supersedes` entry is `adr:NNNN` or `adr:NNNN#id`, the ADR exists, and so does the named
-  consequence;
+  consequence; a bare string `supersedes: adr:0001` is accepted and read as a one-element list;
 - every `amends` entry is `adr:NNNN` or `adr:NNNN#id`, the ADR exists, and so does the named
   consequence (`amends_invalid`, `amends_unresolved`);
 - every `amended_by` entry is `adr:NNNN` naming an ADR in the directory (no consequence anchor;
