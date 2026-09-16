@@ -23,6 +23,8 @@ title: Store rides at per-trip grain, price them at rollup
 status: accepted            # proposed | accepted | superseded | deprecated
 date: 2026-09-08
 supersedes: []              # ["adr:0001"], or one consequence: ["adr:0001#refund-grain"]
+amends: []                  # ["adr:0003"] or ["adr:0003#consequence-id"] — earlier ADR still stands
+amended_by: []              # ["adr:0021"] — whole-ADR refs; set on the earlier record
 areas: [rides, fares, rollup]
 # no-propagation: true           # only when no consequence binds another issue or area
 # no-propagation-reason: "..."

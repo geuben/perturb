@@ -257,6 +257,14 @@ def parse_adr(text: str) -> Adr:
     consequences = _parse_consequences(lines[second + 1 :])
 
     r = fm.get("no-propagation-reason")
+
+    def _as_list(val):
+        if val is None:
+            return []
+        if isinstance(val, list):
+            return val
+        return [val]
+
     return Adr(
         id=fm.get("id"),
         title=fm.get("title"),
@@ -268,6 +276,8 @@ def parse_adr(text: str) -> Adr:
         superseded_by=fm.get("superseded_by"),
         no_propagation=fm.get("no-propagation") is True,
         no_propagation_reason=r if isinstance(r, str) else None,
+        amends=_as_list(fm.get("amends")),
+        amended_by=_as_list(fm.get("amended_by")),
     )
 
 
