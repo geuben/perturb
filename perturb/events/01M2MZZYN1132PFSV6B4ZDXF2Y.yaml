@@ -1,0 +1,17 @@
+id: 01M2MZZYN1132PFSV6B4ZDXF2Y
+at: '2026-09-16T11:35:20Z'
+source: '#119'
+target: '#4'
+kind: unblock
+summary: '#119 closed; this issue is now ready'
+detail: null
+proposed_by: perturb sync
+reason: blocks
+status: acknowledged
+ack:
+  at: '2026-09-16T11:36:19Z'
+  by: geuben
+  plan: tasks/friction-declared-test-paths.md
+  plan_blob: 094c15543da327d89404b1bd199700d65448193b
+  note: 'The unblock is the plan''s premise: #119 shipped as tdd plan paths in tdd-cli
+    v0.11.0, which the plan''s Context and decision 1 build on directly.'
