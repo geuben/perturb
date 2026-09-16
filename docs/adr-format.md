@@ -175,6 +175,8 @@ resolve. Other Markdown in that directory (an index `README.md`, a template, etc
 - `status: superseded` has a `superseded_by` entry, and that ADR lists it in `supersedes`;
 - every `supersedes` entry is `adr:NNNN` or `adr:NNNN#id`, the ADR exists, and so does the named
   consequence; a bare string `supersedes: adr:0001` is accepted and read as a one-element list;
+  the `supersede_backlink` check compares by ADR number, so `adr:2`, `adr:0002`, and `adr:0002#id`
+  are equivalent spellings when checking that a superseding ADR points back;
 - every `amends` entry is `adr:NNNN` or `adr:NNNN#id`, the ADR exists, and so does the named
   consequence (`amends_invalid`, `amends_unresolved`);
 - every `amended_by` entry is `adr:NNNN` naming an ADR in the directory (no consequence anchor;
