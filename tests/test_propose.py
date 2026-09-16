@@ -20,6 +20,7 @@ from perturb.propose import (
     propose_plan,
     read_declared_paths,
     resolve_adr_path,
+    resolve_test_paths,
     review,
 )
 
@@ -1647,6 +1648,53 @@ def test_amends_targets_the_amended_adrs_acknowledgers(amends, expected):
         (t, "amend", "amends", "pending", "adr:0002", "docs/adr/0002-per-trip.md", s)
         for t, s in expected
     ]
+
+
+def test_resolve_test_paths_runs_tdd_plan_paths_in_the_repo_root():
+    import json
+    import types
+
+    calls = []
+    envelope = {
+        "ok": True,
+        "envelope_version": 1,
+        "run": None,
+        "result": {
+            "plan": "tasks/my-plan.md",
+            "paths": [
+                {
+                    "cycle": 1,
+                    "field": "test",
+                    "id": "tests/test_propose.py::test_foo",
+                    "project": "perturb",
+                    "path": "tests/test_propose.py",
+                },
+                {
+                    "cycle": 1,
+                    "field": "modifies_tests",
+                    "id": "tests/test_show.py::test_old",
+                    "project": "perturb",
+                    "path": "tests/test_show.py",
+                },
+            ],
+            "unresolved": [],
+        },
+        "next_action": {"verb": "done", "terminal": True},
+    }
+
+    def fake_runner(argv, capture_output=True, text=True, cwd=None):
+        calls.append({"argv": argv, "cwd": cwd})
+        return types.SimpleNamespace(returncode=0, stdout=json.dumps(envelope), stderr="")
+
+    repo_root = "/repo"
+    result = resolve_test_paths(
+        "tasks/my-plan.md", runner=fake_runner, repo_root=repo_root
+    )
+
+    assert result == {"tests/test_propose.py", "tests/test_show.py"}
+    assert len(calls) == 1
+    assert calls[0]["argv"] == ["tdd", "plan", "paths", "tasks/my-plan.md", "--json"]
+    assert calls[0]["cwd"] == repo_root
 
 
 def test_plan_declares_test_ids_across_every_id_field():
