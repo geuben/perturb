@@ -337,8 +337,10 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
             entry["affects"] = affects
         entries.append(entry)
 
-    amends_out = amends_from_status + amends_from_body
-    amended_by_out = amended_by_from_status + amended_by_from_body
+    amends_out = list(amends_from_status)
+    amends_out.extend(r for r in amends_from_body if r not in amends_out)
+    amended_by_out = list(amended_by_from_status)
+    amended_by_out.extend(r for r in amended_by_from_body if r not in amended_by_out)
     fm = (
         f"---\nid: {adr_id}\ntitle: {json.dumps(title, ensure_ascii=False)}\nstatus: {status}\n"
         f"date: {date}\nsupersedes: {json.dumps(supersedes)}\n"
