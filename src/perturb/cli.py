@@ -604,9 +604,16 @@ def main(argv: list[str] | None = None, *, transport=None, root=None, repo_root=
             )
 
         _repo_root = _local_root if _local_root is not None else Path("")
+        _transport = transport if transport is not None else GhTransport()
 
         def _show_plan_handler(warn):
-            return show(ref, repo_root=_repo_root, config=show_config)
+            return show(
+                ref,
+                repo_root=_repo_root,
+                config=show_config,
+                runner=_transport.runner,
+                warn=warn,
+            )
 
         return dispatch(
             "show",

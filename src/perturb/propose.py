@@ -388,6 +388,9 @@ def resolve_test_paths(plan_rel_path, *, runner, repo_root, warn=None):
     import json
 
     _warn = warn if warn is not None else (lambda _: None)
+    if runner is None:
+        _warn("tdd plan paths unavailable: no runner provided")
+        return set()
     try:
         result = runner(
             ["tdd", "plan", "paths", plan_rel_path, "--json"],
