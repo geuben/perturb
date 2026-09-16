@@ -29,6 +29,11 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **`perturb propose friction:` and `perturb show plan:` no longer flag a planned test edit as
+  outside the plan.** A tdd-cli cycle's `test`, `tests` and `modifies_tests` ids are resolved to
+  file paths via `tdd plan paths` (tdd-cli >= 0.11.0) and counted as declared. On older tdd-cli a
+  warning is emitted and the tool falls back to the previous behaviour.
+
 - **`perturb check` no longer fails on an index `README.md` in `docs/adr`.** Only files named
   `NNNN-<title>.md` are now treated as ADRs; other Markdown in that directory is ignored.
 

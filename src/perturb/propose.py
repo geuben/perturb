@@ -384,6 +384,66 @@ def parse_friction_commits(text):
     return list(dict.fromkeys(shas))
 
 
+def resolve_test_paths(plan_rel_path, *, runner, repo_root, warn=None):
+    import json
+
+    _warn = warn if warn is not None else (lambda _: None)
+    if runner is None:
+        _warn("tdd plan paths unavailable: no runner provided")
+        return set()
+    try:
+        result = runner(
+            ["tdd", "plan", "paths", plan_rel_path, "--json"],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+        )
+    except OSError:
+        _warn("tdd plan paths unavailable: binary not found")
+        return set()
+    if result.returncode != 0:
+        _warn(f"tdd plan paths unavailable (exit {result.returncode})")
+        return set()
+    try:
+        data = json.loads(result.stdout)
+        if not data.get("ok"):
+            _warn(f"tdd plan paths error: {data.get('error', 'unknown')}")
+            return set()
+    except (json.JSONDecodeError, AttributeError):
+        _warn("tdd plan paths unavailable: unexpected output")
+        return set()
+    unresolved = data["result"].get("unresolved", [])
+    if unresolved:
+        ids = ", ".join(row["id"] for row in unresolved)
+        _warn(f"tdd plan paths could not resolve: {ids}")
+    return {row["path"] for row in data["result"]["paths"]}
+
+
+def declared_paths(plan_text, plan_rel_path, *, runner, repo_root, warn=None):
+    base = read_declared_paths(plan_text)
+    if not plan_declares_test_ids(plan_text):
+        return base
+    return base | resolve_test_paths(plan_rel_path, runner=runner, repo_root=repo_root, warn=warn)
+
+
+def plan_declares_test_ids(plan_text):
+    parts = plan_text.split("---", 2)
+    if len(parts) < 3:
+        return False
+    try:
+        fm = yaml.safe_load(parts[1])
+    except Exception:
+        return False
+    if not isinstance(fm, dict):
+        return False
+    for cycle in fm.get("cycles", []) or []:
+        if not isinstance(cycle, dict):
+            continue
+        if cycle.get("test") or cycle.get("tests") or cycle.get("modifies_tests"):
+            return True
+    return False
+
+
 def read_declared_paths(plan_text):
     parts = plan_text.split("---", 2)
     if len(parts) < 3:
@@ -491,12 +551,14 @@ def propose_friction(
     now=None,
     new_id=None,
     config=None,
+    warn=None,
 ):
     config = config or Config()
     repo_root = Path(repo_root)
     friction_rel_path = config.friction_log_path(slug)
     friction_path = repo_root / friction_rel_path
-    plan_path = repo_root / config.plan_path(slug)
+    plan_rel_path = config.plan_path(slug)
+    plan_path = repo_root / plan_rel_path
     if not friction_path.exists():
         raise Refusal("friction_log_not_found", f"no friction log at {friction_path}")
 
@@ -504,10 +566,10 @@ def propose_friction(
     shas = parse_friction_commits(log_text)
 
     plan_text = plan_path.read_text() if plan_path.exists() else ""
-    declared = read_declared_paths(plan_text)
+    decl = declared_paths(plan_text, plan_rel_path, runner=runner, repo_root=repo_root, warn=warn)
     source_number = parse_plan_closes(plan_text) or 0
 
-    touched_outside = files_touched_outside(shas, declared, runner=runner)
+    touched_outside = files_touched_outside(shas, decl, runner=runner)
     area_set = load_areas(repo_root / "perturb" / "areas.yaml")
 
     plan_areas_by_issue = _plan_areas_by_issue(repo_root, graph_issues)

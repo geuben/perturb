@@ -158,8 +158,9 @@ plan:show-verb
     src/perturb/show.py
 ```
 
-`files` lists the plan's [declared files](run-evidence-format.md#plan), or `none`. With `--json` it
-is a list.
+`files` lists the plan's [declared files](run-evidence-format.md#plan), including any test files
+resolved from the plan's `test`, `tests` and `modifies_tests` ids (via tdd-cli >= 0.11.0), or
+`none`. With `--json` it is a list.
 
 Failure reasons: `unknown_issue` when the ref is not in the synced graph; `plan_not_found` when
 the plan file is missing; `unsupported_ref` for ref kinds other than issue and plan (adr, area,

@@ -4,10 +4,10 @@ import yaml
 
 from perturb.config import Config
 from perturb.envelope import Refusal
-from perturb.propose import read_declared_paths
+from perturb.propose import declared_paths
 
 
-def show(ref, *, graph_issues=None, repo_root=None, config=None):
+def show(ref, *, graph_issues=None, repo_root=None, config=None, runner=None, warn=None):
     if ref.kind == "issue":
         issue = (graph_issues or {}).get(str(ref.id))
         if issue is None:
@@ -41,7 +41,13 @@ def show(ref, *, graph_issues=None, repo_root=None, config=None):
         except ValueError:
             end = len(lines)
         fm = yaml.safe_load("\n".join(lines[1:end])) or {}
-        files = sorted(p for p in read_declared_paths(text) if isinstance(p, str))
+        files = sorted(
+            p
+            for p in declared_paths(
+                text, plan_rel_path, runner=runner, repo_root=repo_root, warn=warn
+            )
+            if isinstance(p, str)
+        )
         return {"kind": "plan", "slug": ref.id, "issue": fm.get("closes"), "files": files}
     raise Refusal("unsupported_ref", f"ref kind {ref.kind!r} is not supported by show")
 

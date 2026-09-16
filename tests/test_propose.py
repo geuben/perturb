@@ -10,15 +10,18 @@ from perturb.propose import (
     compute_candidates,
     compute_friction_candidates,
     compute_plan_candidates,
+    declared_paths,
     files_touched_outside,
     parse_audit_items,
     parse_friction_commits,
     parse_plan_entries,
+    plan_declares_test_ids,
     propose,
     propose_friction,
     propose_plan,
     read_declared_paths,
     resolve_adr_path,
+    resolve_test_paths,
     review,
 )
 
@@ -1646,3 +1649,206 @@ def test_amends_targets_the_amended_adrs_acknowledgers(amends, expected):
         (t, "amend", "amends", "pending", "adr:0002", "docs/adr/0002-per-trip.md", s)
         for t, s in expected
     ]
+
+
+def test_declared_paths_does_not_run_tdd_when_no_test_ids():
+    plan_text = "---\ncycles:\n  - n: 1\n    files: [src/a.py]\n---\n"
+
+    def forbidden_runner(argv, **kwargs):
+        raise AssertionError("tdd must not run")
+
+    result = declared_paths(
+        plan_text,
+        "tasks/my-plan.md",
+        runner=forbidden_runner,
+        repo_root="/repo",
+    )
+
+    assert result == {"src/a.py"}
+
+
+def test_declared_paths_unions_contract_paths_and_resolved_test_paths():
+    import json
+    import types
+
+    plan_text = (
+        "---\n"
+        "cycles:\n"
+        "  - n: 1\n"
+        "    test: tests/test_propose.py::test_foo\n"
+        "    files: [src/a.py]\n"
+        "---\n"
+    )
+    envelope = {
+        "ok": True,
+        "envelope_version": 1,
+        "run": None,
+        "result": {
+            "plan": "tasks/my-plan.md",
+            "paths": [
+                {
+                    "cycle": 1,
+                    "field": "test",
+                    "id": "tests/test_propose.py::test_foo",
+                    "project": "perturb",
+                    "path": "tests/test_propose.py",
+                },
+            ],
+            "unresolved": [],
+        },
+        "next_action": {"verb": "done", "terminal": True},
+    }
+
+    def fake_runner(argv, capture_output=True, text=True, cwd=None):
+        return types.SimpleNamespace(returncode=0, stdout=json.dumps(envelope), stderr="")
+
+    result = declared_paths(
+        plan_text,
+        "tasks/my-plan.md",
+        runner=fake_runner,
+        repo_root="/repo",
+    )
+
+    assert result == {"src/a.py", "tests/test_propose.py"}
+
+
+def test_resolve_test_paths_warns_about_unresolved_ids():
+    import json
+    import types
+
+    envelope = {
+        "ok": True,
+        "envelope_version": 1,
+        "run": None,
+        "result": {
+            "plan": "tasks/my-plan.md",
+            "paths": [
+                {
+                    "cycle": 1,
+                    "field": "test",
+                    "id": "tests/test_propose.py::test_foo",
+                    "project": "perturb",
+                    "path": "tests/test_propose.py",
+                },
+            ],
+            "unresolved": [
+                {
+                    "cycle": 1,
+                    "field": "modifies_tests",
+                    "id": "adapter_host_catalog::test_name",
+                    "project": "perturb",
+                },
+            ],
+        },
+        "next_action": {"verb": "done", "terminal": True},
+    }
+
+    def fake_runner(argv, capture_output=True, text=True, cwd=None):
+        return types.SimpleNamespace(returncode=0, stdout=json.dumps(envelope), stderr="")
+
+    warnings = []
+    result = resolve_test_paths(
+        "tasks/my-plan.md",
+        runner=fake_runner,
+        repo_root="/repo",
+        warn=warnings.append,
+    )
+
+    assert result == {"tests/test_propose.py"}
+    assert len(warnings) == 1
+    assert "adapter_host_catalog::test_name" in warnings[0]
+
+
+def test_resolve_test_paths_warns_and_yields_nothing_when_tdd_unavailable():
+    import json
+    import types
+
+    def _make_runner(exc_or_ns):
+        def fake_runner(argv, capture_output=True, text=True, cwd=None):
+            if isinstance(exc_or_ns, BaseException):
+                raise exc_or_ns
+            return exc_or_ns
+
+        return fake_runner
+
+    cases = [
+        _make_runner(OSError("tdd not found")),
+        _make_runner(types.SimpleNamespace(returncode=2, stdout="", stderr="argparse usage")),
+        _make_runner(
+            types.SimpleNamespace(
+                returncode=1,
+                stdout=json.dumps({"ok": False, "error": "git rev-parse failed", "result": {}}),
+                stderr="",
+            )
+        ),
+    ]
+    for runner in cases:
+        warnings = []
+        result = resolve_test_paths(
+            "tasks/my-plan.md",
+            runner=runner,
+            repo_root="/repo",
+            warn=warnings.append,
+        )
+        assert result == set(), f"expected empty set for {runner}"
+        assert len(warnings) == 1, f"expected one warning for {runner}"
+        assert "tdd plan paths" in warnings[0], warnings[0]
+
+
+def test_resolve_test_paths_runs_tdd_plan_paths_in_the_repo_root():
+    import json
+    import types
+
+    calls = []
+    envelope = {
+        "ok": True,
+        "envelope_version": 1,
+        "run": None,
+        "result": {
+            "plan": "tasks/my-plan.md",
+            "paths": [
+                {
+                    "cycle": 1,
+                    "field": "test",
+                    "id": "tests/test_propose.py::test_foo",
+                    "project": "perturb",
+                    "path": "tests/test_propose.py",
+                },
+                {
+                    "cycle": 1,
+                    "field": "modifies_tests",
+                    "id": "tests/test_show.py::test_old",
+                    "project": "perturb",
+                    "path": "tests/test_show.py",
+                },
+            ],
+            "unresolved": [],
+        },
+        "next_action": {"verb": "done", "terminal": True},
+    }
+
+    def fake_runner(argv, capture_output=True, text=True, cwd=None):
+        calls.append({"argv": argv, "cwd": cwd})
+        return types.SimpleNamespace(returncode=0, stdout=json.dumps(envelope), stderr="")
+
+    repo_root = "/repo"
+    result = resolve_test_paths("tasks/my-plan.md", runner=fake_runner, repo_root=repo_root)
+
+    assert result == {"tests/test_propose.py", "tests/test_show.py"}
+    assert len(calls) == 1
+    assert calls[0]["argv"] == ["tdd", "plan", "paths", "tasks/my-plan.md", "--json"]
+    assert calls[0]["cwd"] == repo_root
+
+
+def test_plan_declares_test_ids_across_every_id_field():
+    def plan(cycle_yaml):
+        return f"---\ncycles:\n  - n: 1\n    {cycle_yaml}\n    files: [src/a.py]\n---\n"
+
+    cases = [
+        (plan("test: tests/test_a.py::test_foo"), True),
+        (plan("tests: [tests/test_a.py::test_foo, tests/test_b.py::test_bar]"), True),
+        (plan("modifies_tests: [tests/test_a.py::test_old]"), True),
+        ("---\ncycles:\n  - n: 1\n    files: [src/a.py]\n---\n", False),
+    ]
+    for plan_text, expected in cases:
+        assert plan_declares_test_ids(plan_text) == expected, plan_text
