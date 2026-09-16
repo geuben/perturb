@@ -590,6 +590,23 @@ def test_migrate_warns_with_the_status_segments_it_does_not_carry(annotation, ex
     assert warnings == expected_warnings
 
 
+def test_migrate_joins_a_wrapped_relation_line():
+    text = (
+        "# ADR 0011 — Test\n\n"
+        "**Status:** accepted · 2026-09-10\n"
+        "**Amends:** [ADR-0007](0007-x.md),\n"
+        "[ADR-0009](0009-y.md)\n\n"
+        "## Context\n\nPROSE.\n\n## Consequences\n\n- X happens.\n"
+    )
+    result, warnings = migrate_adr(text, adr_id=11)
+    adr = parse_adr(result)
+    assert adr.amends == ["adr:0007", "adr:0009"]
+    assert warnings == []
+    preamble = result.split("## Context")[0]
+    assert "**Amends:**" not in preamble
+    assert "[ADR-0009]" not in preamble
+
+
 def test_migrate_carries_a_relation_line_in_every_accepted_label_form():
     rows = [
         ("**Amends:** ADR 3", (["adr:0003"], [], [], False)),
