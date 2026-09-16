@@ -8,6 +8,11 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **`superseded_by_unresolved` finding.** `perturb check` now reports `superseded_by_unresolved`
+  when an ADR's `superseded_by` value is malformed, anchored (`adr:NNNN#id`), names an ADR not in
+  the directory, or is a list of two or more entries. Previously all four forms were silently
+  skipped, allowing `status: superseded` ADRs to pass `check` with no verified backlink.
+
 - **`amends` and `amended_by` front-matter keys** for Architecture Decision Records. An ADR that
   amends an earlier one lists it in `amends: ["adr:NNNN"]` or `amends: ["adr:NNNN#consequence-id"]`;
   the earlier ADR lists the amending ADR in `amended_by: ["adr:NNNN"]`. Both stay in force.
@@ -28,6 +33,15 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   surrounding prose are reported as warnings so the author can verify what is lost.
 
 ### Fixed
+
+- **`supersede_backlink` now matches equivalent ADR ref spellings.** `adr:2`, `adr:0002`, and
+  `adr:0002#consequence-id` in a `supersedes` list are all accepted as pointing at ADR 2.
+  Previously the check used string equality, causing false `supersede_backlink` findings for
+  alternative spellings of the same ADR number.
+- **A bare-string `supersedes` is no longer iterated character by character.** `supersedes: adr:0001`
+  (without brackets) is normalised to `["adr:0001"]` at parse time, so `perturb check` and
+  `perturb propose` see a one-element list. Previously it caused one `supersedes_invalid` finding
+  per character.
 
 - **`perturb propose friction:` and `perturb show plan:` no longer flag a planned test edit as
   outside the plan.** A tdd-cli cycle's `test`, `tests` and `modifies_tests` ids are resolved to

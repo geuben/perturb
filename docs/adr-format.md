@@ -172,7 +172,11 @@ resolve. Other Markdown in that directory (an index `README.md`, a template, etc
 - front-matter `id` matches the filename number;
 - every `affects` ref resolves (issue exists, area is declared);
 - every consequence `id` is unique within the ADR;
-- `status: superseded` has a `superseded_by` entry, and that ADR lists it in `supersedes`;
+- `status: superseded` has a `superseded_by` entry that is a whole-ADR ref `adr:NNNN` (no
+  consequence anchor) naming an ADR in the directory; a one-element list `["adr:NNNN"]` is
+  accepted and normalised to the string; anything else (malformed ref, anchored ref, unknown ADR,
+  or a list of two or more entries) is `superseded_by_unresolved`; that ADR lists it in
+  `supersedes`;
 - every `supersedes` entry is `adr:NNNN` or `adr:NNNN#id`, the ADR exists, and so does the named
   consequence; a bare string `supersedes: adr:0001` is accepted and read as a one-element list;
   the `supersede_backlink` check compares by ADR number, so `adr:2`, `adr:0002`, and `adr:0002#id`
