@@ -409,6 +409,10 @@ def resolve_test_paths(plan_rel_path, *, runner, repo_root, warn=None):
     except (json.JSONDecodeError, AttributeError):
         _warn("tdd plan paths unavailable: unexpected output")
         return set()
+    unresolved = data["result"].get("unresolved", [])
+    if unresolved:
+        ids = ", ".join(row["id"] for row in unresolved)
+        _warn(f"tdd plan paths could not resolve: {ids}")
     return {row["path"] for row in data["result"]["paths"]}
 
 
