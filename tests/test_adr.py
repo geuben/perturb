@@ -590,6 +590,146 @@ def test_migrate_warns_with_the_status_segments_it_does_not_carry(annotation, ex
     assert warnings == expected_warnings
 
 
+def test_migrate_merges_status_line_and_body_line_relations():
+    text = (
+        "# ADR 0010 — Test\n\n"
+        "**Status:** accepted · 2026-09-10 · amends ADR 0008\n"
+        "**Amends:** ADR 0008, ADR 9\n\n"
+        "## Context\n\nPROSE.\n\n## Consequences\n\n- X happens.\n"
+    )
+    result, _ = migrate_adr(text, adr_id=10)
+    assert parse_adr(result).amends == ["adr:0008", "adr:0009"]
+
+
+def test_migrate_keeps_and_warns_about_a_partial_relation_line():
+    line = "**Amends:** the module boundary half of [ADR 0003](0003-x.md)"
+    text = (
+        "# ADR 0010 — Test\n\n"
+        "**Status:** accepted · 2026-09-10\n"
+        f"{line}\n\n"
+        "## Context\n\nPROSE.\n\n## Consequences\n\n- X happens.\n"
+    )
+    result, warnings = migrate_adr(text, adr_id=10)
+    adr = parse_adr(result)
+    assert adr.amends == []
+    assert line in result.split("## Context")[0]
+    assert len(warnings) == 1
+    assert "Amends" in warnings[0] and 'amends: ["adr:0003#<consequence-id>"]' in warnings[0]
+
+
+def test_migrate_carries_a_relation_line_with_a_reason_clause_and_warns():
+    rows = [
+        (
+            "**Amends:** [ADR-0003](0003-x.md) (module boundary unchanged)",
+            None,
+            (
+                ["adr:0003"],
+                [],
+                True,
+                [
+                    "**Amends:** line kept in body, reason clause not absorbed: (module boundary unchanged)"  # noqa: E501
+                ],
+            ),
+        ),
+        (
+            "**Amended by:** [ADR-0009](0009-y.md) — the tiers stand",
+            None,
+            (
+                [],
+                ["adr:0009"],
+                True,
+                [
+                    "**Amended by:** line kept in body, reason clause not absorbed: — the tiers stand"  # noqa: E501
+                ],
+            ),
+        ),
+        (
+            "**Amends:** [ADR-0003](0003-single-process.md) (module boundary unchanged;",
+            "the tiers stand)",
+            (
+                ["adr:0003"],
+                [],
+                True,
+                [
+                    "**Amends:** line kept in body, reason clause not absorbed:"
+                    " (module boundary unchanged; the tiers stand)"
+                ],
+            ),
+        ),
+    ]
+    for line, continuation, expected in rows:
+        body = f"{line}\n"
+        if continuation:
+            body += f"{continuation}\n"
+        text = (
+            "# ADR 0010 — Test\n\n"
+            "**Status:** accepted · 2026-09-10\n"
+            f"{body}\n"
+            "## Context\n\nPROSE.\n\n## Consequences\n\n- X happens.\n"
+        )
+        result, warnings = migrate_adr(text, adr_id=10)
+        adr = parse_adr(result)
+        actual = (adr.amends, adr.amended_by, line in result.split("## Context")[0], warnings)
+        assert actual == expected, f"row {line!r}: {actual!r} != {expected!r}"
+
+
+def test_migrate_joins_a_wrapped_relation_line():
+    text = (
+        "# ADR 0011 — Test\n\n"
+        "**Status:** accepted · 2026-09-10\n"
+        "**Amends:** [ADR-0007](0007-x.md),\n"
+        "[ADR-0009](0009-y.md)\n\n"
+        "## Context\n\nPROSE.\n\n## Consequences\n\n- X happens.\n"
+    )
+    result, warnings = migrate_adr(text, adr_id=11)
+    adr = parse_adr(result)
+    assert adr.amends == ["adr:0007", "adr:0009"]
+    assert warnings == []
+    preamble = result.split("## Context")[0]
+    assert "**Amends:**" not in preamble
+    assert "[ADR-0009]" not in preamble
+
+
+def test_migrate_carries_a_relation_line_in_every_accepted_label_form():
+    rows = [
+        ("**Amends:** ADR 3", (["adr:0003"], [], [], False)),
+        ("**amends:** ADR 3", (["adr:0003"], [], [], False)),
+        ("**Extends:** ADR 3", (["adr:0003"], [], [], False)),
+        ("**Amended by:** ADR 9", ([], ["adr:0009"], [], False)),
+        ("**Amended By:** ADR 9", ([], ["adr:0009"], [], False)),
+        ("**Amended-by:** ADR 9", ([], ["adr:0009"], [], False)),
+        ("**Extended by:** ADR 9", ([], ["adr:0009"], [], False)),
+        (
+            "**Amends:** [ADR-0007](0007-x.md), [ADR-0009](0009-y.md)",
+            (["adr:0007", "adr:0009"], [], [], False),
+        ),
+    ]
+    for line, expected in rows:
+        text = (
+            "# ADR 0010 — Test\n\n"
+            "**Status:** accepted · 2026-09-10\n"
+            f"{line}\n\n"
+            "## Context\n\nPROSE.\n\n## Consequences\n\n- X happens.\n"
+        )
+        result, warnings = migrate_adr(text, adr_id=10)
+        adr = parse_adr(result)
+        actual = (adr.amends, adr.amended_by, warnings, line in result.split("## Context")[0])
+        assert actual == expected, f"row {line!r}: {actual!r} != {expected!r}"
+
+
+def test_migrate_leaves_a_non_relation_label_line_alone():
+    line = "**Owner:** Alice"
+    text = (
+        "# ADR 0007 — Keep Postgres\n\n"
+        "**Status:** accepted · 2026-09-10\n"
+        f"{line}\n\n"
+        "## Context\n\nPROSE.\n\n## Consequences\n\n- X happens.\n"
+    )
+    result, warnings = migrate_adr(text, adr_id=7)
+    assert line in result.split("## Context")[0]
+    assert warnings == []
+
+
 def test_amends_and_amended_by_are_parsed():
     base = (
         "---\nid: 2\ntitle: A title\nstatus: accepted\ndate: 2026-09-08\n"

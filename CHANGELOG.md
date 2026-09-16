@@ -8,6 +8,13 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **`adr migrate` now carries `**Amends:**`, `**Extends:**`, `**Amended by:**`, and
+  `**Extended by:**` body lines** into `amends:` and `amended_by:` front-matter. A clean
+  whole-ADR line is absorbed and removed from the body; a line with a reason clause keeps
+  the line in the body and warns; a partial line (non-whole-ADR refs) keeps the line and warns
+  with a consequence-anchor hint. Continuation lines are joined. Body-line refs merge with
+  status-line refs, de-duplicated, status-line first. Closes #12.
+
 - **`superseded_by_unresolved` finding.** `perturb check` now reports `superseded_by_unresolved`
   when an ADR's `superseded_by` value is malformed, anchored (`adr:NNNN#id`), names an ADR not in
   the directory, or is a list of two or more entries. Previously all four forms were silently

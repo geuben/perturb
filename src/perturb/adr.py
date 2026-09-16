@@ -49,6 +49,11 @@ _STATUS_SEPARATORS = " \t·•|,;—–-"
 _SL_SEGMENT_SEP = re.compile(r"[·•|;]")
 _SL_REASON_SEP = re.compile(r" [—–] |: ")
 _SL_ADR_MATCH = re.compile(r"(?:ADR[\s:-]*)?\b(\d+)\b", re.IGNORECASE)
+_RELATION_LABEL = re.compile(
+    r"^\*\*(amends|extends|amended[ -]by|extended[ -]by):\*\*\s*(.*)",
+    re.IGNORECASE,
+)
+_BODY_REASON_SEP = re.compile(r" [—–]| \(|: ")
 _SL_AMENDS_VERB = re.compile(r"^(?:amends|extends)\s+", re.IGNORECASE)
 _SL_AMENDED_WORD = re.compile(r"\b(?:amended|extended)\b", re.IGNORECASE)
 _SL_BY_WORD = re.compile(r"\bby\b", re.IGNORECASE)
@@ -167,6 +172,19 @@ def _whole_adr_numbers(text: str) -> list[int] | None:
     return numbers if numbers and not rest else None
 
 
+def _join_continuation(lines: list[str], start: int, end: int) -> tuple[str, list[int]]:
+    """Join `lines[start+1:]` until a blank, `>`, or `**` line; return joined text and indices."""
+    joined = ""
+    indices: list[int] = []
+    for j in range(start + 1, end):
+        follow = lines[j]
+        if not follow.strip() or follow.startswith((">", "**")):
+            break
+        indices.append(j)
+        joined += " " + follow.strip()
+    return joined, indices
+
+
 def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
     """Rewrite a prose ADR in the structured format. Returns the new text and warnings about
     anything that could not be carried into the front-matter."""
@@ -197,12 +215,10 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
             carried.add(i)
             rest = line.split("**Status:**", 1)[1]
             # A long status line wraps; its continuation lines are part of the annotation.
-            for j in range(i + 1, first_heading):
-                follow = lines[j]
-                if not follow.strip() or follow.startswith((">", "**")):
-                    break
+            continuation, cont_indices = _join_continuation(lines, i, first_heading)
+            for j in cont_indices:
                 carried.add(j)
-                rest += " " + follow.strip()
+            rest += continuation
             m_status = re.match(r"\s*([A-Za-z]+)", rest)
             if m_status:
                 status = m_status.group(1).lower()
@@ -240,6 +256,42 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
                 f'To supersede one consequence, add supersedes: ["{example}#<consequence-id>"]'
             )
         break
+
+    # Carry **Amends:** / **Extends:** / **Amended by:** / **Extended by:** lines
+    amends_from_body: list[str] = []
+    amended_by_from_body: list[str] = []
+    for i, line in enumerate(lines[:first_heading]):
+        m = _RELATION_LABEL.match(line)
+        if not m:
+            continue
+        verb = m.group(1).lower().replace("-", " ")
+        named = m.group(2).strip()
+        continuation, cont_indices = _join_continuation(lines, i, first_heading)
+        named += continuation
+        label_text = line[: line.index(":**") + 3]
+        m_reason = _BODY_REASON_SEP.search(named)
+        head = named[: m_reason.start()] if m_reason else named
+        reason = named[m_reason.start() :].strip() if m_reason else None
+        numbers = _whole_adr_numbers(head)
+        if numbers is None:
+            if reason is None:
+                field = "amends" if verb in ("amends", "extends") else "amended_by"
+                mentioned = _PROSE_ADR_REF.search(_MARKDOWN_LINK.sub(r"\1", head))
+                example = f"adr:{int(mentioned.group(1)):04d}" if mentioned else "adr:NNNN"
+                warnings.append(
+                    f"{label_text} line kept in the body, not carried into {field}: {head}. "
+                    f'To amend one consequence, add {field}: ["{example}#<consequence-id>"]'
+                )
+            continue
+        refs = [f"adr:{n:04d}" for n in numbers]
+        target = amends_from_body if verb in ("amends", "extends") else amended_by_from_body
+        target.extend(r for r in refs if r not in target)
+        if reason is not None:
+            warnings.append(f"{label_text} line kept in body, reason clause not absorbed: {reason}")
+        else:
+            carried.add(i)
+            for j in cont_indices:
+                carried.add(j)
 
     preamble = [line for i, line in enumerate(lines[:first_heading]) if i not in carried]
     while preamble and not preamble[0].strip():
@@ -283,11 +335,15 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
             entry["affects"] = affects
         entries.append(entry)
 
+    amends_out = list(amends_from_status)
+    amends_out.extend(r for r in amends_from_body if r not in amends_out)
+    amended_by_out = list(amended_by_from_status)
+    amended_by_out.extend(r for r in amended_by_from_body if r not in amended_by_out)
     fm = (
         f"---\nid: {adr_id}\ntitle: {json.dumps(title, ensure_ascii=False)}\nstatus: {status}\n"
         f"date: {date}\nsupersedes: {json.dumps(supersedes)}\n"
-        f"amends: {json.dumps(amends_from_status)}\n"
-        f"amended_by: {json.dumps(amended_by_from_status)}\nareas: []\n---\n"
+        f"amends: {json.dumps(amends_out)}\n"
+        f"amended_by: {json.dumps(amended_by_out)}\nareas: []\n---\n"
     )
     body = "\n".join(body_lines).rstrip("\n") + "\n" if body_lines else ""
     if preamble:
