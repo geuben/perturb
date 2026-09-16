@@ -1,5 +1,7 @@
 import datetime
 
+import pytest
+
 from perturb.areas import AreaSet
 from perturb.check import (
     adr_findings,
@@ -311,3 +313,22 @@ def test_unpropagated_accepted_adr_is_a_finding(tmp_path):
             ),
         }
     ]
+
+
+@pytest.mark.parametrize(
+    "entry, expected",
+    [
+        ("adr:0003#v", []),
+        ("adr:0003#nope", [("amends_unresolved", "adr:0003#nope")]),
+        ("adr:0009", [("amends_unresolved", "adr:0009")]),
+        ("ADR 3", [("amends_invalid", "ADR 3")]),
+    ],
+)
+def test_amends_entries_are_validated_like_supersedes(tmp_path, entry, expected):
+    adr_dir = tmp_path / "adr"
+    adr_dir.mkdir()
+    (adr_dir / "0003-old.md").write_text(_adr(3, "accepted", 'amended_by: ["adr:0005"]\n'))
+    (adr_dir / "0005-new.md").write_text(_adr(5, "accepted", f'amends: ["{entry}"]\n'))
+    findings = [(f["kind"], f["ref"]) for f in adr_findings(adr_dir, {"issues": {}})
+                if f["kind"].startswith("amends_")]
+    assert findings == expected

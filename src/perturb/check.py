@@ -112,6 +112,40 @@ def adr_findings(adr_dir: Path, graph: dict, area_set: AreaSet | None = None) ->
                 }
             )
 
+    # Amends entries must name an ADR in this directory and an optional consequence it has
+    for adr in parsed.values():
+        own = f"adr:{adr.id:04d}"
+        for entry in adr.amends:
+            target_ref = parse_supersedes_ref(entry)
+            if target_ref is None:
+                findings.append(
+                    {
+                        "kind": "amends_invalid",
+                        "ref": str(entry),
+                        "detail": f"{own} amends {entry!r}, not adr:NNNN or adr:NNNN#id",
+                        "fix": f"write it as adr:NNNN or adr:NNNN#<consequence-id> in {own}",
+                    }
+                )
+                continue
+            number, consequence_id = target_ref
+            target = parsed.get(number)
+            if target is None:
+                detail = f"{own} amends adr:{number:04d}, which is not in {adr_dir}"
+            elif consequence_id is not None and consequence_id not in {
+                c.id for c in target.consequences
+            }:
+                detail = f"adr:{number:04d} has no consequence {consequence_id!r}"
+            else:
+                continue
+            findings.append(
+                {
+                    "kind": "amends_unresolved",
+                    "ref": str(entry),
+                    "detail": detail,
+                    "fix": f"correct the amends entry {entry!r} in {own}",
+                }
+            )
+
     # Backlink check: superseded_by target must list this ADR in its supersedes
     for adr in parsed.values():
         if not adr.superseded_by:

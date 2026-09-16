@@ -140,6 +140,8 @@ A one-off `perturb adr migrate docs/adr/0002-*.md`:
 - `status: superseded` has a `superseded_by` entry, and that ADR lists it in `supersedes`;
 - every `supersedes` entry is `adr:NNNN` or `adr:NNNN#id`, the ADR exists, and so does the named
   consequence;
+- every `amends` entry is `adr:NNNN` or `adr:NNNN#id`, the ADR exists, and so does the named
+  consequence (`amends_invalid`, `amends_unresolved`);
 - an ADR with `status: accepted` has at least one event, in any status, whose source is `adr:NNNN`
   or `adr:NNNN#<consequence>`, or it carries `no-propagation: true` (a YAML boolean) with a
   non-empty `no-propagation-reason`. `no-propagation: true` without a reason is itself a finding.
