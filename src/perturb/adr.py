@@ -171,6 +171,19 @@ def _whole_adr_numbers(text: str) -> list[int] | None:
     return numbers if numbers and not rest else None
 
 
+def _join_continuation(lines: list[str], start: int, end: int) -> tuple[str, list[int]]:
+    """Join `lines[start+1:]` until a blank, `>`, or `**` line; return joined text and indices."""
+    joined = ""
+    indices: list[int] = []
+    for j in range(start + 1, end):
+        follow = lines[j]
+        if not follow.strip() or follow.startswith((">", "**")):
+            break
+        indices.append(j)
+        joined += " " + follow.strip()
+    return joined, indices
+
+
 def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
     """Rewrite a prose ADR in the structured format. Returns the new text and warnings about
     anything that could not be carried into the front-matter."""
@@ -201,12 +214,10 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
             carried.add(i)
             rest = line.split("**Status:**", 1)[1]
             # A long status line wraps; its continuation lines are part of the annotation.
-            for j in range(i + 1, first_heading):
-                follow = lines[j]
-                if not follow.strip() or follow.startswith((">", "**")):
-                    break
+            continuation, cont_indices = _join_continuation(lines, i, first_heading)
+            for j in cont_indices:
                 carried.add(j)
-                rest += " " + follow.strip()
+            rest += continuation
             m_status = re.match(r"\s*([A-Za-z]+)", rest)
             if m_status:
                 status = m_status.group(1).lower()
@@ -254,13 +265,8 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
             continue
         verb = m.group(1).lower().replace("-", " ")
         named = m.group(2).strip()
-        continuation_indices: list[int] = []
-        for j in range(i + 1, first_heading):
-            follow = lines[j]
-            if not follow.strip() or follow.startswith((">", "**")):
-                break
-            continuation_indices.append(j)
-            named += " " + follow.strip()
+        continuation, cont_indices = _join_continuation(lines, i, first_heading)
+        named += continuation
         numbers = _whole_adr_numbers(named)
         if numbers is not None:
             refs = [f"adr:{n:04d}" for n in numbers]
@@ -269,7 +275,7 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
             else:
                 amended_by_from_body.extend(r for r in refs if r not in amended_by_from_body)
             carried.add(i)
-            for j in continuation_indices:
+            for j in cont_indices:
                 carried.add(j)
 
     preamble = [line for i, line in enumerate(lines[:first_heading]) if i not in carried]
