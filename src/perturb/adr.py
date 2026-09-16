@@ -53,6 +53,7 @@ _RELATION_LABEL = re.compile(
     r"^\*\*(amends|extends|amended[ -]by|extended[ -]by):\*\*\s*(.*)",
     re.IGNORECASE,
 )
+_BODY_REASON_SEP = re.compile(r" [—–]| \(|: ")
 _SL_AMENDS_VERB = re.compile(r"^(?:amends|extends)\s+", re.IGNORECASE)
 _SL_AMENDED_WORD = re.compile(r"\b(?:amended|extended)\b", re.IGNORECASE)
 _SL_BY_WORD = re.compile(r"\bby\b", re.IGNORECASE)
@@ -267,16 +268,32 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
         named = m.group(2).strip()
         continuation, cont_indices = _join_continuation(lines, i, first_heading)
         named += continuation
-        numbers = _whole_adr_numbers(named)
-        if numbers is not None:
-            refs = [f"adr:{n:04d}" for n in numbers]
-            if verb in ("amends", "extends"):
-                amends_from_body.extend(r for r in refs if r not in amends_from_body)
-            else:
-                amended_by_from_body.extend(r for r in refs if r not in amended_by_from_body)
-            carried.add(i)
-            for j in cont_indices:
-                carried.add(j)
+        label_text = line[:line.index(":**") + 3]
+        m_reason = _BODY_REASON_SEP.search(named)
+        if m_reason:
+            head = named[:m_reason.start()]
+            reason = named[m_reason.start():].strip()
+            numbers = _whole_adr_numbers(head)
+            if numbers is not None:
+                refs = [f"adr:{n:04d}" for n in numbers]
+                if verb in ("amends", "extends"):
+                    amends_from_body.extend(r for r in refs if r not in amends_from_body)
+                else:
+                    amended_by_from_body.extend(r for r in refs if r not in amended_by_from_body)
+                warnings.append(
+                    f"{label_text} line kept in body, reason clause not absorbed: {reason}"
+                )
+        else:
+            numbers = _whole_adr_numbers(named)
+            if numbers is not None:
+                refs = [f"adr:{n:04d}" for n in numbers]
+                if verb in ("amends", "extends"):
+                    amends_from_body.extend(r for r in refs if r not in amends_from_body)
+                else:
+                    amended_by_from_body.extend(r for r in refs if r not in amended_by_from_body)
+                carried.add(i)
+                for j in cont_indices:
+                    carried.add(j)
 
     preamble = [line for i, line in enumerate(lines[:first_heading]) if i not in carried]
     while preamble and not preamble[0].strip():
