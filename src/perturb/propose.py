@@ -385,7 +385,21 @@ def parse_friction_commits(text):
 
 
 def plan_declares_test_ids(plan_text):
-    raise NotImplementedError
+    parts = plan_text.split("---", 2)
+    if len(parts) < 3:
+        return False
+    try:
+        fm = yaml.safe_load(parts[1])
+    except Exception:
+        return False
+    if not isinstance(fm, dict):
+        return False
+    for cycle in fm.get("cycles", []) or []:
+        if not isinstance(cycle, dict):
+            continue
+        if cycle.get("test") or cycle.get("tests") or cycle.get("modifies_tests"):
+            return True
+    return False
 
 
 def read_declared_paths(plan_text):
