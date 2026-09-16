@@ -191,7 +191,7 @@ def _make_parser() -> argparse.ArgumentParser:
     )
     push_parser.add_argument(
         "--kind",
-        choices=["decision", "scope", "friction", "supersede"],
+        choices=["decision", "scope", "friction", "supersede", "amend"],
         required=True,
         help="what kind of change the event is",
     )

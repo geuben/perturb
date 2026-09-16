@@ -2677,3 +2677,20 @@ def test_propose_adr_routes_area_affects_to_in_area_issues(tmp_path, capsys):
         code,
         sorted((p["target"], p["reason"], p["status"]) for p in out["data"]["proposed"]),
     ) == (0, [("#33", "area", "proposed"), ("#34", "area", "proposed")])
+
+
+def test_push_verb_accepts_the_amend_kind(tmp_path):
+    from perturb.events import EventStore
+
+    issue_29 = _make_issue_node(29)
+    transport = _make_push_transport([_make_page([issue_29])])
+    root = tmp_path / ".perturb"
+    repo_root = tmp_path
+    code = main(
+        ["push", "--from", "5", "--to", "29", "--kind", "amend", "s", "--json"],
+        transport=transport,
+        root=root,
+        repo_root=repo_root,
+    )
+    events = EventStore(tmp_path / "perturb" / "events").load().events
+    assert (code, [e.kind for e in events]) == (0, ["amend"])

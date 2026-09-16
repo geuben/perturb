@@ -51,7 +51,7 @@ perturb push --from <N> --to <M> --kind decision "<the decision, in one sentence
 
 - **The test** is whether M's planner would choose differently without knowing this. Most
   decisions don't pass it, which keeps inboxes worth reading.
-- **Kinds:** `decision` constrains M's design, `scope` moves work into or out of M, and `supersede`
+- **Kinds:** `decision` constrains M's design, `scope` moves work into or out of M, `amend` changes a premise of M's constraint while it still stands, and `supersede`
   replaces part of it.
 - **`--detail`** points at the text behind the event, which `perturb inbox` quotes. The file and
   heading must exist when you push, or it refuses with `detail_unresolved`.

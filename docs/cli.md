@@ -249,7 +249,7 @@ refuses with `github_error`.
 ### `perturb dismiss <event-id>... [--note "..."]`
 `proposed|pending → dismissed`.
 
-### `perturb push --from <ref> (--to <ref>... | --new "title") --kind decision|scope|friction|supersede "summary" [--detail path#anchor] [--by name]`
+### `perturb push --from <ref> (--to <ref>... | --new "title") --kind decision|scope|friction|supersede|amend "summary" [--detail path#anchor] [--by name]`
 Human-authored event, born `pending` with `reason: manual`. Syncs first and refuses if
 GitHub is unreachable. `--from` is canonicalised but not validated against the cache. `--to` takes
 one or more open, non-epic issue refs; an epic target is refused and lists its open children.
