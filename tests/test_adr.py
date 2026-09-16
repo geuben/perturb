@@ -599,7 +599,10 @@ def test_migrate_carries_a_relation_line_in_every_accepted_label_form():
         ("**Amended By:** ADR 9", ([], ["adr:0009"], [], False)),
         ("**Amended-by:** ADR 9", ([], ["adr:0009"], [], False)),
         ("**Extended by:** ADR 9", ([], ["adr:0009"], [], False)),
-        ("**Amends:** [ADR-0007](0007-x.md), [ADR-0009](0009-y.md)", (["adr:0007", "adr:0009"], [], [], False)),
+        (
+            "**Amends:** [ADR-0007](0007-x.md), [ADR-0009](0009-y.md)",
+            (["adr:0007", "adr:0009"], [], [], False),
+        ),
     ]
     for line, expected in rows:
         text = (
