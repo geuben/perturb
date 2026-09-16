@@ -387,13 +387,28 @@ def parse_friction_commits(text):
 def resolve_test_paths(plan_rel_path, *, runner, repo_root, warn=None):
     import json
 
-    result = runner(
-        ["tdd", "plan", "paths", plan_rel_path, "--json"],
-        capture_output=True,
-        text=True,
-        cwd=repo_root,
-    )
-    data = json.loads(result.stdout)
+    _warn = warn if warn is not None else (lambda _: None)
+    try:
+        result = runner(
+            ["tdd", "plan", "paths", plan_rel_path, "--json"],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+        )
+    except OSError:
+        _warn("tdd plan paths unavailable: binary not found")
+        return set()
+    if result.returncode != 0:
+        _warn(f"tdd plan paths unavailable (exit {result.returncode})")
+        return set()
+    try:
+        data = json.loads(result.stdout)
+        if not data.get("ok"):
+            _warn(f"tdd plan paths error: {data.get('error', 'unknown')}")
+            return set()
+    except (json.JSONDecodeError, AttributeError):
+        _warn("tdd plan paths unavailable: unexpected output")
+        return set()
     return {row["path"] for row in data["result"]["paths"]}
 
 
