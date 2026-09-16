@@ -590,6 +590,30 @@ def test_migrate_warns_with_the_status_segments_it_does_not_carry(annotation, ex
     assert warnings == expected_warnings
 
 
+def test_migrate_carries_a_relation_line_in_every_accepted_label_form():
+    rows = [
+        ("**Amends:** ADR 3", (["adr:0003"], [], [], False)),
+        ("**amends:** ADR 3", (["adr:0003"], [], [], False)),
+        ("**Extends:** ADR 3", (["adr:0003"], [], [], False)),
+        ("**Amended by:** ADR 9", ([], ["adr:0009"], [], False)),
+        ("**Amended By:** ADR 9", ([], ["adr:0009"], [], False)),
+        ("**Amended-by:** ADR 9", ([], ["adr:0009"], [], False)),
+        ("**Extended by:** ADR 9", ([], ["adr:0009"], [], False)),
+        ("**Amends:** [ADR-0007](0007-x.md), [ADR-0009](0009-y.md)", (["adr:0007", "adr:0009"], [], [], False)),
+    ]
+    for line, expected in rows:
+        text = (
+            "# ADR 0010 — Test\n\n"
+            "**Status:** accepted · 2026-09-10\n"
+            f"{line}\n\n"
+            "## Context\n\nPROSE.\n\n## Consequences\n\n- X happens.\n"
+        )
+        result, warnings = migrate_adr(text, adr_id=10)
+        adr = parse_adr(result)
+        actual = (adr.amends, adr.amended_by, warnings, line in result.split("## Context")[0])
+        assert actual == expected, f"row {line!r}: {actual!r} != {expected!r}"
+
+
 def test_migrate_leaves_a_non_relation_label_line_alone():
     line = "**Owner:** Alice"
     text = (
