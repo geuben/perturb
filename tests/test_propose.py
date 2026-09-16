@@ -14,6 +14,7 @@ from perturb.propose import (
     parse_audit_items,
     parse_friction_commits,
     parse_plan_entries,
+    plan_declares_test_ids,
     propose,
     propose_friction,
     propose_plan,
@@ -1646,3 +1647,14 @@ def test_amends_targets_the_amended_adrs_acknowledgers(amends, expected):
         (t, "amend", "amends", "pending", "adr:0002", "docs/adr/0002-per-trip.md", s)
         for t, s in expected
     ]
+
+
+def test_plan_declares_test_ids_across_every_id_field():
+    cases = [
+        ("---\ncycles:\n  - n: 1\n    test: tests/test_a.py::test_foo\n    files: [src/a.py]\n---\n", True),
+        ("---\ncycles:\n  - n: 1\n    tests: [tests/test_a.py::test_foo, tests/test_b.py::test_bar]\n    files: [src/a.py]\n---\n", True),
+        ("---\ncycles:\n  - n: 1\n    modifies_tests: [tests/test_a.py::test_old]\n    files: [src/a.py]\n---\n", True),
+        ("---\ncycles:\n  - n: 1\n    files: [src/a.py]\n---\n", False),
+    ]
+    for plan_text, expected in cases:
+        assert plan_declares_test_ids(plan_text) == expected, plan_text

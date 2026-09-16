@@ -384,6 +384,10 @@ def parse_friction_commits(text):
     return list(dict.fromkeys(shas))
 
 
+def plan_declares_test_ids(plan_text):
+    raise NotImplementedError
+
+
 def read_declared_paths(plan_text):
     parts = plan_text.split("---", 2)
     if len(parts) < 3:
