@@ -470,7 +470,7 @@ _MIGRATE_TMPL = (
         ("Extends ADR:4 and [0005](0005-x.md)", (["adr:0004", "adr:0005"], [])),
         ("amends 8, ADR 9 & ADR-10", (["adr:0008", "adr:0009", "adr:0010"], [])),
         (
-            "amends [ADR-0008](0008-shape.md) — an integration no longer solely owns the presented shape",
+            "amends [ADR-0008](0008-shape.md) — an integration no longer solely owns the presented shape",  # noqa: E501
             (["adr:0008"], []),
         ),
         ("extends ADR 0008: adds panel geometry", (["adr:0008"], [])),
