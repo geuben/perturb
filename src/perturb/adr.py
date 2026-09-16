@@ -274,6 +274,14 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
         reason = named[m_reason.start():].strip() if m_reason else None
         numbers = _whole_adr_numbers(head)
         if numbers is None:
+            if reason is None:
+                field = "amends" if verb in ("amends", "extends") else "amended_by"
+                mentioned = _PROSE_ADR_REF.search(_MARKDOWN_LINK.sub(r"\1", head))
+                example = f"adr:{int(mentioned.group(1)):04d}" if mentioned else "adr:NNNN"
+                warnings.append(
+                    f"{label_text} line kept in the body, not carried into {field}: {head}. "
+                    f'To amend one consequence, add {field}: ["{example}#<consequence-id>"]'
+                )
             continue
         refs = [f"adr:{n:04d}" for n in numbers]
         target = amends_from_body if verb in ("amends", "extends") else amended_by_from_body
