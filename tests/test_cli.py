@@ -2696,6 +2696,60 @@ def test_push_verb_accepts_the_amend_kind(tmp_path):
     assert (code, [e.kind for e in events]) == (0, ["amend"])
 
 
+def test_show_plan_resolves_test_paths_through_the_transport_runner(tmp_path, capsys):
+    repo = tmp_path / "repo"
+    tasks = repo / "tasks"
+    tasks.mkdir(parents=True)
+    plan_text = (
+        "---\n"
+        "closes: 9\n"
+        "cycles:\n"
+        "  - n: 1\n"
+        "    test: tests/test_show.py::test_foo\n"
+        "    files: [src/x.py]\n"
+        "---\n"
+    )
+    (tasks / "my-plan.md").write_text(plan_text)
+
+    tdd_envelope = json.dumps(
+        {
+            "ok": True,
+            "envelope_version": 1,
+            "run": None,
+            "result": {
+                "plan": "tasks/my-plan.md",
+                "paths": [
+                    {
+                        "cycle": 1,
+                        "field": "test",
+                        "id": "tests/test_show.py::test_foo",
+                        "project": "perturb",
+                        "path": "tests/test_show.py",
+                    }
+                ],
+                "unresolved": [],
+            },
+            "next_action": {"verb": "done", "terminal": True},
+        }
+    )
+
+    class ShowTransport:
+        def runner(self, argv, capture_output=True, text=True, cwd=None):
+            if argv == ["tdd", "plan", "paths", "tasks/my-plan.md", "--json"]:
+                return _make_runner_result(0, tdd_envelope)
+            raise AssertionError(f"unexpected argv: {argv!r}")
+
+    code = main(
+        ["show", "plan:my-plan", "--json"],
+        transport=ShowTransport(),
+        repo_root=repo,
+    )
+    assert code == 0
+    envelope = json.loads(capsys.readouterr().out)
+    assert envelope["ok"] is True
+    assert "tests/test_show.py" in envelope["data"]["files"]
+
+
 def test_propose_friction_counts_modifies_tests_as_declared(tmp_path, capsys):
     repo = tmp_path / "repo"
     perturb_root = repo / ".perturb"
