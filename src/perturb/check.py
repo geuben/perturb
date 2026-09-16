@@ -178,6 +178,39 @@ def adr_findings(adr_dir: Path, graph: dict, area_set: AreaSet | None = None) ->
                     }
                 )
 
+    # amend_backlink: amended_by adr:M requires ADR M to have amends entry for this ADR
+    for adr in parsed.values():
+        own_number = adr.id
+        own = f"adr:{own_number:04d}"
+        for entry in adr.amended_by:
+            target_ref = parse_supersedes_ref(entry)
+            if target_ref is None or target_ref[1] is not None:
+                continue  # already reported as amended_by_unresolved
+            number, _ = target_ref
+            amender = parsed.get(number)
+            if amender is None:
+                continue  # already reported as amended_by_unresolved
+            amender_amends_numbers = {
+                parse_supersedes_ref(e)[0]
+                for e in amender.amends
+                if parse_supersedes_ref(e) is not None
+            }
+            if own_number not in amender_amends_numbers:
+                findings.append(
+                    {
+                        "kind": "amend_backlink",
+                        "ref": own,
+                        "detail": (
+                            f"{own} has amended_by adr:{number:04d} "
+                            f"but adr:{number:04d} does not amend {own}"
+                        ),
+                        "fix": (
+                            f"add {own} or {own}#<consequence-id> "
+                            f"to the amends list of adr:{number:04d}"
+                        ),
+                    }
+                )
+
     # Backlink check: superseded_by target must list this ADR in its supersedes
     for adr in parsed.values():
         if not adr.superseded_by:
