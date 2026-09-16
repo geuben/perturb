@@ -74,6 +74,7 @@ ack:                          # present once status is acknowledged or dismissed
 | `scope` | plan, issue | this issue's scope moved: something was cut from or pushed into it |
 | `friction` | friction, audit | run evidence about code this issue will touch |
 | `supersede` | adr, issue | the source replaces or invalidates part of the target |
+| `amend` | adr | the source changes a premise or clause of the target; both records stay in force |
 | `unblock` | issue | a blocker closed; informational, generated on `sync` so `inbox` is complete |
 
 ### Lifecycle

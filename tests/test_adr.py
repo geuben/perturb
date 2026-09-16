@@ -455,6 +455,104 @@ def test_no_propagation_flag_and_reason_are_parsed():
     assert outcome == expected
 
 
+_MIGRATE_TMPL = (
+    "# ADR 0021 — Resolution\n\n"
+    "**Status:** Accepted · 2026-09-10 · {annotation}\n\n"
+    "## Context\n\nPROSE.\n\n"
+    "## Consequences\n\n- X happens.\n"
+)
+
+
+@pytest.mark.parametrize(
+    "annotation, relations",
+    [
+        ("amends ADR 0008", (["adr:0008"], [])),
+        ("amends [ADR-0008](0008-shape.md)", (["adr:0008"], [])),
+        ("Extends ADR:4 and [0005](0005-x.md)", (["adr:0004", "adr:0005"], [])),
+        ("amends 8, ADR 9 & ADR-10", (["adr:0008", "adr:0009", "adr:0010"], [])),
+        (
+            "amends [ADR-0008](0008-shape.md) — an integration no longer solely owns the presented shape",  # noqa: E501
+            (["adr:0008"], []),
+        ),
+        ("extends ADR 0008: adds panel geometry", (["adr:0008"], [])),
+        ("amended by ADR 0021", ([], ["adr:0021"])),
+        ("resolution premise amended by 0021", ([], ["adr:0021"])),
+        ("extended to physical geometry by [0022](0022-panel-geometry.md)", ([], ["adr:0022"])),
+        ("amends ADR 0008 · amended by ADR 0023", (["adr:0008"], ["adr:0023"])),
+        # rejected forms — carry nothing
+        ("amends ADR-0002's premise", ([], [])),
+        ("amends ADR-0008#shape", ([], [])),
+        ("amends [the shape section](0008-shape.md#shape)", ([], [])),
+        ("amended by the 2024 review", ([], [])),
+        ("amended in review", ([], [])),
+        ("storage engine superseded by ADR 0005", ([], [])),
+    ],
+)
+def test_migrate_carries_whole_adr_relations_from_the_status_line(annotation, relations):
+    text = _MIGRATE_TMPL.format(annotation=annotation)
+    migrated, _ = migrate_adr(text, adr_id=21)
+    adr = parse_adr(migrated)
+    assert (adr.amends, adr.amended_by) == relations
+
+
+_P = "status line annotation not carried into the front-matter: "
+
+
+@pytest.mark.parametrize(
+    "annotation, expected_warnings",
+    [
+        ("amends ADR 0008", []),
+        ("amended by ADR 0021", []),
+        ("resolution premise amended by 0021", [_P + "resolution premise amended by 0021"]),
+        (
+            "amends [ADR-0008](0008-shape.md) — an integration no longer solely owns the presented shape",  # noqa: E501
+            [
+                _P
+                + "amends [ADR-0008](0008-shape.md) — an integration no longer solely owns the presented shape"  # noqa: E501
+            ],
+        ),
+        ("amends ADR 0008 \xb7 reviewed quarterly", [_P + "reviewed quarterly"]),
+        (
+            "amends ADR-0002's premise",
+            [
+                _P
+                + 'amends ADR-0002\'s premise. To amend one consequence, add amends: ["adr:0002#<consequence-id>"]'  # noqa: E501
+            ],
+        ),
+        ("storage engine superseded by ADR 0005", [_P + "storage engine superseded by ADR 0005"]),
+    ],
+)
+def test_migrate_warns_with_the_status_segments_it_does_not_carry(annotation, expected_warnings):
+    text = _MIGRATE_TMPL.format(annotation=annotation)
+    _, warnings = migrate_adr(text, adr_id=21)
+    assert warnings == expected_warnings
+
+
+def test_amends_and_amended_by_are_parsed():
+    base = (
+        "---\nid: 2\ntitle: A title\nstatus: accepted\ndate: 2026-09-08\n"
+        "{extra}"
+        "---\n\n## Consequences\n\n```yaml\n- id: v\n  text: ok.\n  kind: decision\n```\n"
+    )
+    cases = {
+        "absent": ("", ([], [])),
+        "both": (
+            'amends: ["adr:0008", "adr:0003#shape"]\namended_by: ["adr:0021"]\n',
+            (["adr:0008", "adr:0003#shape"], ["adr:0021"]),
+        ),
+        "string_amends": ("amends: adr:0008\n", (["adr:0008"], [])),
+        "string_amended_by": ("amended_by: adr:0021\n", ([], ["adr:0021"])),
+        "non_str_amends": ("amends: 42\n", ([42], [])),
+        "null_amends": ("amends: null\n", ([], [])),
+    }
+    outcome = {}
+    for case, (extra_fm, _) in cases.items():
+        adr = parse_adr(base.format(extra=extra_fm))
+        outcome[case] = (adr.amends, adr.amended_by)
+    expected = {case: exp for case, (_, exp) in cases.items()}
+    assert outcome == expected
+
+
 def test_non_list_consequences_raises():
     text = (
         "---\nid: 2\ntitle: A title\nstatus: accepted\ndate: 2026-09-08\n---\n\n"

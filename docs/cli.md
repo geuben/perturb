@@ -218,9 +218,12 @@ Failure reasons: `not_a_git_repo` when run outside a git repository (nothing is 
 Rewrite a prose ADR into the structured format in [adr-format.md](adr-format.md#migration-for-existing-adrs),
 in place. The ADR id is taken from the leading digits of the filename. Fully local. `data` is
 `{"path": "...", "consequences": N}`; an unparseable ADR refuses with the parser's reason.
-`warnings` lists anything that could not be carried into the front-matter: a `**Supersedes:**`
-line that doesn't name only whole ADRs (it stays in the body), or an annotation on the status
-line.
+`warnings` lists status-line segments that were not fully carried into the front-matter: a
+`**Supersedes:**` line that doesn't name only whole ADRs (it stays in the body); a status-line
+segment whose wording contains more than the ADR ref (a reason clause, an anchored ref, or
+unrecognised text); or an `amends`/`amended_by` ref whose annotation was carried into the
+front-matter but whose surrounding prose (e.g. the reason clause) is lost. Segments that are
+wholly carried — a bare `amends ADR NNNN` or `amended by ADR NNNN` — produce no warning.
 
 ### `perturb propose <source-ref> [--review] [--by name]`
 Read the source artefact, compute candidate targets, write `proposed` events. An epic ref as a
@@ -251,7 +254,7 @@ refuses with `github_error`.
 ### `perturb dismiss <event-id>... [--note "..."]`
 `proposed|pending → dismissed`.
 
-### `perturb push --from <ref> (--to <ref>... | --new "title") --kind decision|scope|friction|supersede "summary" [--detail path#anchor] [--by name]`
+### `perturb push --from <ref> (--to <ref>... | --new "title") --kind decision|scope|friction|supersede|amend "summary" [--detail path#anchor] [--by name]`
 Human-authored event, born `pending` with `reason: manual`. Syncs first and refuses if
 GitHub is unreachable. `--from` is canonicalised but not validated against the cache. `--to` takes
 one or more open, non-epic issue refs; an epic target is refused and lists its open children.

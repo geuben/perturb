@@ -74,8 +74,8 @@ What `perturb` reads from plans, friction logs and audits is specified in
 
 All optional. The tool degrades to lower-confidence proposals when they are absent.
 
-ADR: the structured format in [adr-format.md](adr-format.md). `affects`, `areas` and
-`supersedes` per ADR, `id`/`text`/`affects` per consequence.
+ADR: the structured format in [adr-format.md](adr-format.md). `affects`, `areas`,
+`supersedes`, `amends`, and `amended_by` per ADR, `id`/`text`/`affects` per consequence.
 
 Plan (`closes:` is required):
 

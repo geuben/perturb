@@ -166,6 +166,47 @@ def compute_candidates(
                 }
             )
 
+    # Amends pass: for each adr:M in adr.amends, find distinct open non-epic targets of acked
+    # events whose source is "adr:<MMMM>" or starts with "adr:<MMMM>#" (whole), or equals
+    # "adr:<MMMM>#id" (anchored), and emit pending amend/amends candidates
+    for amends_ref in adr.amends:
+        parsed_ref = parse_supersedes_ref(amends_ref)
+        if parsed_ref is None:
+            continue
+        number, consequence_id = parsed_ref
+        prefix = f"adr:{number:04d}"
+        summary = adr.title
+        if consequence_id is not None:
+            summary = f"{adr.title} (amends {prefix}#{consequence_id})"
+        seen_amend = set()
+        for ev in ack_events:
+            if ev.status != "acknowledged":
+                continue
+            src = ev.source
+            if consequence_id is not None:
+                if src != f"{prefix}#{consequence_id}":
+                    continue
+            elif src != prefix and not src.startswith(prefix + "#"):
+                continue
+            target_num = ev.target.lstrip("#")
+            issue = graph_issues.get(target_num)
+            if issue is None or not _is_open_non_epic(issue):
+                continue
+            if ev.target in seen_amend:
+                continue
+            seen_amend.add(ev.target)
+            candidates.append(
+                {
+                    "target": ev.target,
+                    "status": "pending",
+                    "reason": "amends",
+                    "kind": "amend",
+                    "summary": summary,
+                    "detail": adr_rel_path,
+                    "source": f"adr:{adr.id:04d}",
+                }
+            )
+
     # Deprecated pass: when this ADR is deprecated, target its own acknowledgers
     if adr.status == "deprecated":
         own_prefix = f"adr:{adr.id:04d}"

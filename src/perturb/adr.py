@@ -1,7 +1,7 @@
 import datetime
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import yaml
 
@@ -33,6 +33,8 @@ class Adr:
     superseded_by: str | None = None
     no_propagation: bool = False
     no_propagation_reason: str | None = None
+    amends: list = field(default_factory=list)
+    amended_by: list = field(default_factory=list)
 
 
 _SUPERSEDES_REF = re.compile(r"adr:(\d+)(?:#([A-Za-z0-9][\w.-]*))?")
@@ -43,6 +45,12 @@ _ISSUE_URL = re.compile(r"/issues/\d+")
 _PULL_REQUEST_BEFORE = re.compile(r"\b(?:PR|pull request)\s*$", re.IGNORECASE)
 _TITLE_PREFIX = re.compile(r"^ADR[\s-]*\d+\s*[:—–-]\s*", re.IGNORECASE)
 _STATUS_SEPARATORS = " \t·•|,;—–-"
+_SL_SEGMENT_SEP = re.compile(r"[·•|;]")
+_SL_REASON_SEP = re.compile(r" [—–] |: ")
+_SL_ADR_MATCH = re.compile(r"(?:ADR[\s:-]*)?\b(\d+)\b", re.IGNORECASE)
+_SL_AMENDS_VERB = re.compile(r"^(?:amends|extends)\s+", re.IGNORECASE)
+_SL_AMENDED_WORD = re.compile(r"\b(?:amended|extended)\b", re.IGNORECASE)
+_SL_BY_WORD = re.compile(r"\bby\b", re.IGNORECASE)
 
 
 def parse_supersedes_ref(entry) -> tuple[int, str | None] | None:
@@ -53,6 +61,99 @@ def parse_supersedes_ref(entry) -> tuple[int, str | None] | None:
     if m is None:
         return None
     return int(m.group(1)), m.group(2)
+
+
+def _whole_status_refs(text: str) -> list[int] | None:
+    """Return ADR numbers when `text` (after MD-link stripping) is a whole status-line ref list."""
+    plain = _MARKDOWN_LINK.sub(r"\1", text)
+    numbers = [int(m.group(1)) for m in _SL_ADR_MATCH.finditer(plain)]
+    if not numbers:
+        return None
+    rest = _SL_ADR_MATCH.sub("", plain)
+    rest = re.sub(r"\band\b|\s|[,&]", "", rest, flags=re.IGNORECASE)
+    return numbers if not rest else None
+
+
+def _parse_status_relations(annotation: str) -> tuple[list[str], list[str]]:
+    """Extract amends and amended_by from a status-line annotation."""
+    amends_out: list[str] = []
+    amended_by_out: list[str] = []
+    for seg in _SL_SEGMENT_SEP.split(annotation):
+        seg = seg.strip()
+        if not seg:
+            continue
+        m = _SL_AMENDS_VERB.match(seg)
+        if m:
+            rest = seg[m.end() :]
+            text = _SL_REASON_SEP.split(rest, maxsplit=1)[0]
+            numbers = _whole_status_refs(text)
+            if numbers is not None:
+                for n in numbers:
+                    ref = f"adr:{n:04d}"
+                    if ref not in amends_out:
+                        amends_out.append(ref)
+            continue
+        if _SL_AMENDED_WORD.search(seg):
+            last_by = None
+            for m_by in _SL_BY_WORD.finditer(seg):
+                last_by = m_by
+            if last_by:
+                rest = seg[last_by.end() :]
+                text = _SL_REASON_SEP.split(rest, maxsplit=1)[0]
+                numbers = _whole_status_refs(text)
+                if numbers is not None:
+                    for n in numbers:
+                        ref = f"adr:{n:04d}"
+                        if ref not in amended_by_out:
+                            amended_by_out.append(ref)
+    return amends_out, amended_by_out
+
+
+def _status_warning_segments(annotation: str) -> list[str]:
+    """Return annotation segments not fully carried into front-matter, with hints where useful."""
+    warn_segs = []
+    for seg in _SL_SEGMENT_SEP.split(annotation):
+        seg = seg.strip()
+        if not seg:
+            continue
+        m = _SL_AMENDS_VERB.match(seg)
+        if m:
+            rest = seg[m.end() :]
+            parts = _SL_REASON_SEP.split(rest, maxsplit=1)
+            text = parts[0]
+            has_reason = len(parts) > 1
+            numbers = _whole_status_refs(text)
+            if numbers is not None and not has_reason:
+                continue
+            if numbers is None:
+                plain = _MARKDOWN_LINK.sub(r"\1", rest)
+                m_num = _SL_ADR_MATCH.search(plain)
+                if m_num:
+                    n = int(m_num.group(1))
+                    warn_segs.append(
+                        f'{seg}. To amend one consequence, add amends: ["adr:{n:04d}#<consequence-id>"]'  # noqa: E501
+                    )
+                else:
+                    warn_segs.append(seg)
+            else:
+                warn_segs.append(seg)
+            continue
+        if _SL_AMENDED_WORD.search(seg):
+            last_by = None
+            for m_by in _SL_BY_WORD.finditer(seg):
+                last_by = m_by
+            if last_by:
+                before_by = seg[: last_by.start()].strip()
+                if re.fullmatch(r"(?:amended|extended)", before_by, re.IGNORECASE):
+                    rest = seg[last_by.end() :]
+                    text = _SL_REASON_SEP.split(rest, maxsplit=1)[0]
+                    numbers = _whole_status_refs(text)
+                    if numbers is not None:
+                        continue
+            warn_segs.append(seg)
+        else:
+            warn_segs.append(seg)
+    return warn_segs
 
 
 def _whole_adr_numbers(text: str) -> list[int] | None:
@@ -86,6 +187,8 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
     # Extract status and date from the **Status:** line
     status = ""
     date = ""
+    amends_from_status: list[str] = []
+    amended_by_from_status: list[str] = []
     for i, line in enumerate(lines):
         if "**Status:**" in line:
             carried.add(i)
@@ -106,10 +209,14 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
                 date = m_date.group(0)
                 rest = rest[: m_date.start()] + rest[m_date.end() :]
             annotation = rest.strip(_STATUS_SEPARATORS)
+            amends_from_status, amended_by_from_status = _parse_status_relations(annotation)
             if annotation:
-                warnings.append(
-                    f"status line annotation not carried into the front-matter: {annotation}"
-                )
+                warn_segs = _status_warning_segments(annotation)
+                if warn_segs:
+                    warnings.append(
+                        "status line annotation not carried into the front-matter: "
+                        + " \xb7 ".join(warn_segs)
+                    )
             break
 
     # Carry a **Supersedes:** line naming whole ADRs; keep any other in the body
@@ -175,7 +282,9 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
 
     fm = (
         f"---\nid: {adr_id}\ntitle: {json.dumps(title, ensure_ascii=False)}\nstatus: {status}\n"
-        f"date: {date}\nsupersedes: {json.dumps(supersedes)}\nareas: []\n---\n"
+        f"date: {date}\nsupersedes: {json.dumps(supersedes)}\n"
+        f"amends: {json.dumps(amends_from_status)}\n"
+        f"amended_by: {json.dumps(amended_by_from_status)}\nareas: []\n---\n"
     )
     body = "\n".join(body_lines).rstrip("\n") + "\n" if body_lines else ""
     if preamble:
@@ -244,9 +353,11 @@ def parse_adr(text: str) -> Adr:
     if not isinstance(fm, dict):
         raise AdrError("bad_frontmatter", "front-matter parsed to a non-mapping")
 
-    for field in ("id", "title", "status", "date"):
-        if fm.get(field) is None:
-            raise AdrError("missing_field", f"required front-matter field '{field}' is absent")
+    for required_field in ("id", "title", "status", "date"):
+        if fm.get(required_field) is None:
+            raise AdrError(
+                "missing_field", f"required front-matter field '{required_field}' is absent"
+            )  # noqa: E501
 
     date_val = fm.get("date")
     if isinstance(date_val, datetime.date):
@@ -255,6 +366,14 @@ def parse_adr(text: str) -> Adr:
     consequences = _parse_consequences(lines[second + 1 :])
 
     r = fm.get("no-propagation-reason")
+
+    def _as_list(val):
+        if val is None:
+            return []
+        if isinstance(val, list):
+            return val
+        return [val]
+
     return Adr(
         id=fm.get("id"),
         title=fm.get("title"),
@@ -266,6 +385,8 @@ def parse_adr(text: str) -> Adr:
         superseded_by=fm.get("superseded_by"),
         no_propagation=fm.get("no-propagation") is True,
         no_propagation_reason=r if isinstance(r, str) else None,
+        amends=_as_list(fm.get("amends")),
+        amended_by=_as_list(fm.get("amended_by")),
     )
 
 
@@ -296,11 +417,11 @@ def _parse_consequences(lines: list) -> list:
     result = []
     seen_ids: set[str] = set()
     for entry in entries:
-        for field in ("id", "text"):
-            if entry.get(field) is None:
+        for required_field in ("id", "text"):
+            if entry.get(required_field) is None:
                 raise AdrError(
                     "missing_consequence_field",
-                    f"consequence missing required field '{field}'",
+                    f"consequence missing required field '{required_field}'",
                 )
         cid = entry.get("id")
         if cid in seen_ids:

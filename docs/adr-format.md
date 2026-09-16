@@ -23,6 +23,8 @@ title: Store rides at per-trip grain, price them at rollup
 status: accepted            # proposed | accepted | superseded | deprecated
 date: 2026-09-08
 supersedes: []              # ["adr:0001"], or one consequence: ["adr:0001#refund-grain"]
+amends: []                  # ["adr:0003"] or ["adr:0003#consequence-id"] — earlier ADR still stands
+amended_by: []              # ["adr:0021"] — whole-ADR refs; set on the earlier record
 areas: [rides, fares, rollup]
 # no-propagation: true           # only when no consequence binds another issue or area
 # no-propagation-reason: "..."
@@ -91,6 +93,8 @@ author could not attach to anything is either general knowledge or not yet actio
 | `#N` mentioned in consequence text, not in `affects` | proposed | `mentions` |
 | ADR `supersedes: [adr:M]` → issues that acknowledged any event from `adr:M` | pending, kind `supersede` | `supersedes` |
 | ADR `supersedes: [adr:M#id]` → issues that acknowledged an event from consequence `id` of `adr:M` | pending, kind `supersede` | `supersedes` |
+| ADR `amends: [adr:M]` → issues that acknowledged any event from `adr:M` | pending, kind `amend` | `amends` |
+| ADR `amends: [adr:M#id]` → issues that acknowledged an event from consequence `id` of `adr:M` | pending, kind `amend` | `amends` |
 | `status` changed to `deprecated` | pending, kind `supersede`, to every acknowledger | `deprecated` |
 
 Editing a consequence's `text` changes the summary hash, so the next `propose` writes new events
@@ -112,6 +116,27 @@ that consequence; issues that absorbed the ADR's other consequences hear nothing
 keeps `status: accepted`, since most of it is still in force. Supersede a whole ADR with
 `supersedes: ["adr:0003"]`, and give the old ADR `status: superseded` and `superseded_by`.
 
+## Amending an ADR
+
+A decision sometimes changes a premise or a clause of an earlier ADR while both records stay in
+force. Use `amends` on the new ADR and `amended_by` on the earlier one:
+
+```yaml
+# new ADR
+amends: ["adr:0008"]               # whole ADR, or "adr:0008#shape-ownership" for one consequence
+```
+
+```yaml
+# ADR 0008
+amended_by: ["adr:0021"]           # whole-ADR ref only; the earlier record keeps its status
+```
+
+`perturb propose` raises `amend` events to the issues that acknowledged events from the amended ADR
+(or consequence). The earlier ADR keeps `status: accepted`; the relation is informational.
+
+`extends` on a status line is read as `amends` by `perturb adr migrate`. Use `amends:` in
+front-matter — there is no separate `extends` key.
+
 ## Migration for existing ADRs
 
 A one-off `perturb adr migrate docs/adr/0002-*.md`:
@@ -121,9 +146,16 @@ A one-off `perturb adr migrate docs/adr/0002-*.md`:
    (`**Supersedes:** [ADR 0003](0003-x.md) and ADR 4`). Any other Supersedes line, such as "the
    storage half of ADR 0003", stays in the body with a warning; write the matching
    `adr:0003#<consequence-id>` entry by hand.
-3. Keep any prose between the status line and the first heading at the top of the body. An
+3. Carry status-line `amends`/`extends` and `amended by`/`extended … by` annotations that name
+   only whole ADR numbers into `amends:` and `amended_by:` in the front-matter. `extends` is read
+   as `amends`. Accepted forms: `amends ADR 0008`, `amends [ADR-0008](0008-shape.md)`,
+   `Extends ADR:4 and 0005`, `amended by ADR 0021`, `resolution premise amended by 0021`,
+   `extended to physical geometry by [0022](0022-panel-geometry.md)`. Anchored refs
+   (`amends ADR-0008#shape`), reason clauses before bare refs, and unrecognized annotations are
+   reported as warnings.
+4. Keep any prose between the status line and the first heading at the top of the body. An
    annotation on the status line itself is reported as a warning.
-4. Split the existing Consequences bullets into entries with generated ids from the first
+5. Split the existing Consequences bullets into entries with generated ids from the first
    noun phrase; the author renames them.
 5. Extract `#NNN` mentions in each bullet into that entry's `affects`, so nothing already in
    prose is lost.
@@ -143,6 +175,13 @@ resolve. Other Markdown in that directory (an index `README.md`, a template, etc
 - `status: superseded` has a `superseded_by` entry, and that ADR lists it in `supersedes`;
 - every `supersedes` entry is `adr:NNNN` or `adr:NNNN#id`, the ADR exists, and so does the named
   consequence;
+- every `amends` entry is `adr:NNNN` or `adr:NNNN#id`, the ADR exists, and so does the named
+  consequence (`amends_invalid`, `amends_unresolved`);
+- every `amended_by` entry is `adr:NNNN` naming an ADR in the directory (no consequence anchor;
+  `amended_by_unresolved`);
+- two-way symmetry: `amended_by: [adr:M]` on ADR N requires ADR M to list N (or N#id) in
+  `amends` (`amend_backlink`), and a resolved `amends` entry on ADR M requires ADR N to list M
+  in `amended_by` (`amended_by_missing`);
 - an ADR with `status: accepted` has at least one event, in any status, whose source is `adr:NNNN`
   or `adr:NNNN#<consequence>`, or it carries `no-propagation: true` (a YAML boolean) with a
   non-empty `no-propagation-reason`. `no-propagation: true` without a reason is itself a finding.

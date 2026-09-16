@@ -75,8 +75,8 @@ perturb push --from 31 --to 32 --kind decision "Fare periods are half-open"
 ```
 
 This writes a `pending` event to `perturb/events/`. Commit it with the work that made the decision.
-The target must be an open issue that isn't an epic. The kinds are `decision`, `scope`, `friction`
-and `supersede`.
+The target must be an open issue that isn't an epic. The kinds are `decision`, `scope`, `friction`,
+`amend`, and `supersede`.
 
 ## Plan an issue against its inbox
 

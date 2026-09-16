@@ -128,6 +128,139 @@ def adr_findings(adr_dir: Path, graph: dict, area_set: AreaSet | None = None) ->
                 }
             )
 
+    # Amends entries must name an ADR in this directory and an optional consequence it has
+    for adr in parsed.values():
+        own = f"adr:{adr.id:04d}"
+        for entry in adr.amends:
+            target_ref = parse_supersedes_ref(entry)
+            if target_ref is None:
+                findings.append(
+                    {
+                        "kind": "amends_invalid",
+                        "ref": str(entry),
+                        "detail": f"{own} amends {entry!r}, not adr:NNNN or adr:NNNN#id",
+                        "fix": f"write it as adr:NNNN or adr:NNNN#<consequence-id> in {own}",
+                    }
+                )
+                continue
+            number, consequence_id = target_ref
+            target = parsed.get(number)
+            if target is None:
+                detail = f"{own} amends adr:{number:04d}, which is not in {adr_dir}"
+            elif consequence_id is not None and consequence_id not in {
+                c.id for c in target.consequences
+            }:
+                detail = f"adr:{number:04d} has no consequence {consequence_id!r}"
+            else:
+                continue
+            findings.append(
+                {
+                    "kind": "amends_unresolved",
+                    "ref": str(entry),
+                    "detail": detail,
+                    "fix": f"correct the amends entry {entry!r} in {own}",
+                }
+            )
+
+    # amended_by entries must be whole-ADR refs adr:NNNN (no consequence anchor)
+    for adr in parsed.values():
+        own = f"adr:{adr.id:04d}"
+        for entry in adr.amended_by:
+            target_ref = parse_supersedes_ref(entry)
+            if target_ref is None or target_ref[1] is not None:
+                findings.append(
+                    {
+                        "kind": "amended_by_unresolved",
+                        "ref": str(entry),
+                        "detail": (
+                            f"{own} has amended_by {entry!r}, "
+                            f"which is not adr:NNNN naming an ADR in {adr_dir}"
+                        ),
+                        "fix": f"write it as adr:NNNN naming the amending ADR in {own}",
+                    }
+                )
+                continue
+            number, _ = target_ref
+            if parsed.get(number) is None:
+                findings.append(
+                    {
+                        "kind": "amended_by_unresolved",
+                        "ref": str(entry),
+                        "detail": (
+                            f"{own} has amended_by {entry!r}, "
+                            f"which is not adr:NNNN naming an ADR in {adr_dir}"
+                        ),
+                        "fix": f"write it as adr:NNNN naming the amending ADR in {own}",
+                    }
+                )
+
+    # amended_by_missing: amends entry on M requires N to list M in amended_by
+    for adr in parsed.values():
+        own_number = adr.id
+        own = f"adr:{own_number:04d}"
+        for entry in adr.amends:
+            target_ref = parse_supersedes_ref(entry)
+            if target_ref is None:
+                continue  # already reported as amends_invalid
+            number, consequence_id = target_ref
+            target = parsed.get(number)
+            if target is None:
+                continue  # already reported as amends_unresolved
+            if consequence_id is not None and consequence_id not in {
+                c.id for c in target.consequences
+            }:
+                continue  # already reported as amends_unresolved
+            target_amended_by_numbers = {
+                parse_supersedes_ref(e)[0]
+                for e in target.amended_by
+                if parse_supersedes_ref(e) is not None and parse_supersedes_ref(e)[1] is None
+            }
+            if own_number not in target_amended_by_numbers:
+                findings.append(
+                    {
+                        "kind": "amended_by_missing",
+                        "ref": str(entry),
+                        "detail": (
+                            f"{own} amends {entry} but adr:{number:04d} "
+                            f"does not list {own} in amended_by"
+                        ),
+                        "fix": f"add {own} to amended_by in adr:{number:04d}",
+                    }
+                )
+
+    # amend_backlink: amended_by adr:M requires ADR M to have amends entry for this ADR
+    for adr in parsed.values():
+        own_number = adr.id
+        own = f"adr:{own_number:04d}"
+        for entry in adr.amended_by:
+            target_ref = parse_supersedes_ref(entry)
+            if target_ref is None or target_ref[1] is not None:
+                continue  # already reported as amended_by_unresolved
+            number, _ = target_ref
+            amender = parsed.get(number)
+            if amender is None:
+                continue  # already reported as amended_by_unresolved
+            amender_amends_numbers = {
+                parse_supersedes_ref(e)[0]
+                for e in amender.amends
+                if parse_supersedes_ref(e) is not None
+            }
+            if own_number not in amender_amends_numbers:
+                findings.append(
+                    {
+                        "kind": "amend_backlink",
+                        "ref": own,
+                        "detail": (
+                            f"{own} has amended_by adr:{number:04d} "
+                            f"but adr:{number:04d} does not amend {own}"
+                        ),
+                        "fix": (
+                            f"add {own} or {own}#<consequence-id> "
+                            f"to the amends list of adr:{number:04d}"
+                        ),
+                    }
+                )
+
     # Backlink check: superseded_by target must list this ADR in its supersedes
     for adr in parsed.values():
         if not adr.superseded_by:

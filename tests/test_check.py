@@ -1,5 +1,7 @@
 import datetime
 
+import pytest
+
 from perturb.areas import AreaSet
 from perturb.check import (
     adr_findings,
@@ -311,6 +313,74 @@ def test_unpropagated_accepted_adr_is_a_finding(tmp_path):
             ),
         }
     ]
+
+
+@pytest.mark.parametrize(
+    "entry, expected",
+    [
+        ("adr:0003#v", []),
+        ("adr:0003#nope", [("amends_unresolved", "adr:0003#nope")]),
+        ("adr:0009", [("amends_unresolved", "adr:0009")]),
+        ("ADR 3", [("amends_invalid", "ADR 3")]),
+    ],
+)
+def test_amends_entries_are_validated_like_supersedes(tmp_path, entry, expected):
+    adr_dir = tmp_path / "adr"
+    adr_dir.mkdir()
+    (adr_dir / "0003-old.md").write_text(_adr(3, "accepted", 'amended_by: ["adr:0005"]\n'))
+    (adr_dir / "0005-new.md").write_text(_adr(5, "accepted", f'amends: ["{entry}"]\n'))
+    findings = [
+        (f["kind"], f["ref"])
+        for f in adr_findings(adr_dir, {"issues": {}})
+        if f["kind"].startswith("amends_")
+    ]
+    assert findings == expected
+
+
+@pytest.mark.parametrize(
+    "old_extra, new_extra, expected",
+    [
+        ("", 'amends: ["adr:0003#v"]\n', [("amended_by_missing", "adr:0003#v")]),
+        ('amended_by: ["adr:0005"]\n', 'amends: ["adr:0003#v"]\n', []),
+        ('amended_by: ["adr:5"]\n', 'amends: ["adr:3#v"]\n', []),
+    ],
+)
+def test_amends_needs_the_earlier_adr_to_list_it_in_amended_by(
+    tmp_path, old_extra, new_extra, expected
+):  # noqa: E501
+    adr_dir = tmp_path / "adr"
+    adr_dir.mkdir()
+    (adr_dir / "0003-old.md").write_text(_adr(3, "accepted", old_extra))
+    (adr_dir / "0005-new.md").write_text(_adr(5, "accepted", new_extra))
+    findings = [(f["kind"], f["ref"]) for f in adr_findings(adr_dir, {"issues": {}})]
+    assert findings == expected
+
+
+@pytest.mark.parametrize(
+    "new_extra, expected",
+    [
+        ("", [("amend_backlink", "adr:0003")]),
+        ('amends: ["adr:0003#v"]\n', []),
+        ('amends: ["adr:3"]\n', []),
+    ],
+)
+def test_amended_by_needs_the_amending_adr_to_list_it_in_amends(tmp_path, new_extra, expected):
+    adr_dir = tmp_path / "adr"
+    adr_dir.mkdir()
+    (adr_dir / "0003-old.md").write_text(_adr(3, "accepted", 'amended_by: ["adr:0005"]\n'))
+    (adr_dir / "0005-new.md").write_text(_adr(5, "accepted", new_extra))
+    findings = [(f["kind"], f["ref"]) for f in adr_findings(adr_dir, {"issues": {}})]
+    assert findings == expected
+
+
+@pytest.mark.parametrize("entry", ["adr:0009", "ADR 5", "adr:0005#v"])
+def test_an_amended_by_entry_that_names_no_adr_is_a_finding(tmp_path, entry):
+    adr_dir = tmp_path / "adr"
+    adr_dir.mkdir()
+    (adr_dir / "0003-old.md").write_text(_adr(3, "accepted", f'amended_by: ["{entry}"]\n'))
+    (adr_dir / "0005-new.md").write_text(_adr(5, "accepted"))
+    findings = [(f["kind"], f["ref"]) for f in adr_findings(adr_dir, {"issues": {}})]
+    assert findings == [("amended_by_unresolved", entry)]
 
 
 def test_check_reads_only_adr_named_files(tmp_path):
