@@ -1651,6 +1651,28 @@ def test_amends_targets_the_amended_adrs_acknowledgers(amends, expected):
     ]
 
 
+def test_declared_paths_does_not_run_tdd_when_no_test_ids():
+    plan_text = (
+        "---\n"
+        "cycles:\n"
+        "  - n: 1\n"
+        "    files: [src/a.py]\n"
+        "---\n"
+    )
+
+    def forbidden_runner(argv, **kwargs):
+        raise AssertionError("tdd must not run")
+
+    result = declared_paths(
+        plan_text,
+        "tasks/my-plan.md",
+        runner=forbidden_runner,
+        repo_root="/repo",
+    )
+
+    assert result == {"src/a.py"}
+
+
 def test_declared_paths_unions_contract_paths_and_resolved_test_paths():
     import json
     import types
