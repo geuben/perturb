@@ -146,6 +146,19 @@ def test_supersedes_a_malformed_entry_is_a_finding(tmp_path):
     assert _supersedes_findings(tmp_path, "ADR 3") == [("supersedes_invalid", "ADR 3")]
 
 
+def test_a_bare_string_supersedes_is_read_as_one_ref(tmp_path):
+    adr_dir = tmp_path / "adr"
+    adr_dir.mkdir()
+    (adr_dir / "0002-old.md").write_text(
+        _adr(2, "superseded", "superseded_by: adr:0005\n")
+    )
+    (adr_dir / "0005-new.md").write_text(
+        _adr(5, "accepted", "supersedes: adr:0002\n")
+    )
+    findings = [(f["kind"], f.get("ref")) for f in adr_findings(adr_dir, {"issues": {}})]
+    assert findings == []
+
+
 def test_superseded_without_superseded_by_is_a_finding(tmp_path):
     adr_dir = tmp_path / "adr"
     adr_dir.mkdir()
