@@ -417,7 +417,9 @@ def resolve_test_paths(plan_rel_path, *, runner, repo_root, warn=None):
 
 
 def declared_paths(plan_text, plan_rel_path, *, runner, repo_root, warn=None):
-    raise NotImplementedError
+    return read_declared_paths(plan_text) | resolve_test_paths(
+        plan_rel_path, runner=runner, repo_root=repo_root, warn=warn
+    )
 
 
 def plan_declares_test_ids(plan_text):
