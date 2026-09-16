@@ -153,13 +153,26 @@ A one-off `perturb adr migrate docs/adr/0002-*.md`:
    `extended to physical geometry by [0022](0022-panel-geometry.md)`. Anchored refs
    (`amends ADR-0008#shape`), reason clauses before bare refs, and unrecognized annotations are
    reported as warnings.
-4. Keep any prose between the status line and the first heading at the top of the body. An
+4. Carry `**Amends:**`, `**Extends:**`, `**Amended by:**`, and `**Extended by:**` labelled body
+   lines into `amends:` and `amended_by:` (case-insensitive; `-` accepted for the space in
+   two-word forms). Continuation lines — a line that is not blank and does not start with `>`
+   or `**` — are joined to the preceding relation line before its refs are read.
+   - A whole-ADR line (`**Amends:** ADR 0003, ADR 4`) has its refs carried and the line removed
+     from the body.
+   - A line with a reason clause (first ` — `, ` – `, `: `, or ` (` in the text) has its refs
+     carried, keeps the whole line in the body, and warns with the clause — the author should fold
+     the explanation into a consequence.
+   - A line naming more than whole ADRs (`**Amends:** the storage half of ADR 0003`) keeps the
+     line in the body and warns with a consequence-anchor hint
+     (`amends: ["adr:0003#<consequence-id>"]`).
+   - Body-line refs merge with status-line refs from step 3, status-line first, de-duplicated.
+5. Keep any prose between the status line and the first heading at the top of the body. An
    annotation on the status line itself is reported as a warning.
-5. Split the existing Consequences bullets into entries with generated ids from the first
+6. Split the existing Consequences bullets into entries with generated ids from the first
    noun phrase; the author renames them.
-5. Extract `#NNN` mentions in each bullet into that entry's `affects`, so nothing already in
+7. Extract `#NNN` mentions in each bullet into that entry's `affects`, so nothing already in
    prose is lost.
-6. Write the file back; the author reviews the diff and the warnings, fills `areas`, and runs
+8. Write the file back; the author reviews the diff and the warnings, fills `areas`, and runs
    `perturb propose`.
 
 ## Validation in `perturb check`
