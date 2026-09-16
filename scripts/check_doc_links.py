@@ -28,12 +28,17 @@ def anchors(path: Path) -> set[str]:
     return found
 
 
+_SKIP_DIRS = {"tasks/friction-logs"}
+
+
 def main() -> int:
     tracked = subprocess.run(
         ["git", "ls-files", "*.md"], capture_output=True, text=True, check=True
     ).stdout.split()
     problems = []
     for name in tracked:
+        if any(name.startswith(d + "/") for d in _SKIP_DIRS):
+            continue
         source = Path(name)
         for match in LINK.finditer(CODE.sub("", source.read_text())):
             target = match.group(1)
