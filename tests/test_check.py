@@ -332,3 +332,13 @@ def test_amends_entries_are_validated_like_supersedes(tmp_path, entry, expected)
     findings = [(f["kind"], f["ref"]) for f in adr_findings(adr_dir, {"issues": {}})
                 if f["kind"].startswith("amends_")]
     assert findings == expected
+
+
+@pytest.mark.parametrize("entry", ["adr:0009", "ADR 5", "adr:0005#v"])
+def test_an_amended_by_entry_that_names_no_adr_is_a_finding(tmp_path, entry):
+    adr_dir = tmp_path / "adr"
+    adr_dir.mkdir()
+    (adr_dir / "0003-old.md").write_text(_adr(3, "accepted", f'amended_by: ["{entry}"]\n'))
+    (adr_dir / "0005-new.md").write_text(_adr(5, "accepted"))
+    findings = [(f["kind"], f["ref"]) for f in adr_findings(adr_dir, {"issues": {}})]
+    assert findings == [("amended_by_unresolved", entry)]

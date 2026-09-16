@@ -146,6 +146,38 @@ def adr_findings(adr_dir: Path, graph: dict, area_set: AreaSet | None = None) ->
                 }
             )
 
+    # amended_by entries must be whole-ADR refs adr:NNNN (no consequence anchor)
+    for adr in parsed.values():
+        own = f"adr:{adr.id:04d}"
+        for entry in adr.amended_by:
+            target_ref = parse_supersedes_ref(entry)
+            if target_ref is None or target_ref[1] is not None:
+                findings.append(
+                    {
+                        "kind": "amended_by_unresolved",
+                        "ref": str(entry),
+                        "detail": (
+                            f"{own} has amended_by {entry!r}, "
+                            f"which is not adr:NNNN naming an ADR in {adr_dir}"
+                        ),
+                        "fix": f"write it as adr:NNNN naming the amending ADR in {own}",
+                    }
+                )
+                continue
+            number, _ = target_ref
+            if parsed.get(number) is None:
+                findings.append(
+                    {
+                        "kind": "amended_by_unresolved",
+                        "ref": str(entry),
+                        "detail": (
+                            f"{own} has amended_by {entry!r}, "
+                            f"which is not adr:NNNN naming an ADR in {adr_dir}"
+                        ),
+                        "fix": f"write it as adr:NNNN naming the amending ADR in {own}",
+                    }
+                )
+
     # Backlink check: superseded_by target must list this ADR in its supersedes
     for adr in parsed.values():
         if not adr.superseded_by:
