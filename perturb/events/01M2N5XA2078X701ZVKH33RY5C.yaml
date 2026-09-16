@@ -1,0 +1,17 @@
+id: 01M2N5XA2078X701ZVKH33RY5C
+at: '2026-09-16T13:18:45Z'
+source: '#3'
+target: '#7'
+kind: unblock
+summary: '#3 closed; this issue is now ready'
+detail: null
+proposed_by: perturb sync
+reason: blocks
+status: acknowledged
+ack:
+  at: '2026-09-16T13:18:59Z'
+  by: geuben
+  plan: tasks/supersede-backlink-ref-spellings.md
+  plan_blob: 1120efb972e5b8a2bd2a9a41951c32b7f56caf30
+  note: '#3 closed (merged as #16); the plan''s Context records that and builds on
+    its amends/amended_by parity.'

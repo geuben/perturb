@@ -1,0 +1,10 @@
+id: 01M2N5XA1P2FPKA30W33HBHPC0
+at: '2026-09-16T13:18:45Z'
+source: '#3'
+target: '#12'
+kind: unblock
+summary: '#3 closed; this issue is now ready'
+detail: null
+proposed_by: perturb sync
+reason: blocks
+status: pending

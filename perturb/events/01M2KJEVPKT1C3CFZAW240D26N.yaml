@@ -10,4 +10,12 @@ summary: '**`supersede_backlink` keeps its string comparison.** It misses `adr:2
 detail: tasks/adr-amends.md#deliberate-scope-cuts-do-not-build
 proposed_by: geuben
 reason: mentions
-status: pending
+status: acknowledged
+ack:
+  at: '2026-09-16T13:18:44Z'
+  by: geuben
+  plan: tasks/supersede-backlink-ref-spellings.md
+  plan_blob: 1120efb972e5b8a2bd2a9a41951c32b7f56caf30
+  note: supersede_backlink now compares parsed ADR numbers (decisions 1-2); the scope
+    cut from plan:adr-amends is absorbed as this plan's cycles 1-2, and the semantic-change-not-a-refactor
+    warning is honoured by driving it from a RED test.
