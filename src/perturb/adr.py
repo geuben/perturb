@@ -382,7 +382,7 @@ def parse_adr(text: str) -> Adr:
         title=fm.get("title"),
         status=fm.get("status"),
         date=date_val,
-        supersedes=fm.get("supersedes") or [],
+        supersedes=_as_list(fm.get("supersedes")),
         areas=fm.get("areas") or [],
         consequences=consequences,
         superseded_by=fm.get("superseded_by"),
