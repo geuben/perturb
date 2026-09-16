@@ -246,9 +246,9 @@ def parse_adr(text: str) -> Adr:
     if not isinstance(fm, dict):
         raise AdrError("bad_frontmatter", "front-matter parsed to a non-mapping")
 
-    for field in ("id", "title", "status", "date"):
-        if fm.get(field) is None:
-            raise AdrError("missing_field", f"required front-matter field '{field}' is absent")
+    for required_field in ("id", "title", "status", "date"):
+        if fm.get(required_field) is None:
+            raise AdrError("missing_field", f"required front-matter field '{required_field}' is absent")  # noqa: E501
 
     date_val = fm.get("date")
     if isinstance(date_val, datetime.date):
@@ -308,11 +308,11 @@ def _parse_consequences(lines: list) -> list:
     result = []
     seen_ids: set[str] = set()
     for entry in entries:
-        for field in ("id", "text"):
-            if entry.get(field) is None:
+        for required_field in ("id", "text"):
+            if entry.get(required_field) is None:
                 raise AdrError(
                     "missing_consequence_field",
-                    f"consequence missing required field '{field}'",
+                    f"consequence missing required field '{required_field}'",
                 )
         cid = entry.get("id")
         if cid in seen_ids:
