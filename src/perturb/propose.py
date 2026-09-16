@@ -385,7 +385,16 @@ def parse_friction_commits(text):
 
 
 def resolve_test_paths(plan_rel_path, *, runner, repo_root, warn=None):
-    raise NotImplementedError
+    import json
+
+    result = runner(
+        ["tdd", "plan", "paths", plan_rel_path, "--json"],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+    )
+    data = json.loads(result.stdout)
+    return {row["path"] for row in data["result"]["paths"]}
 
 
 def plan_declares_test_ids(plan_text):
