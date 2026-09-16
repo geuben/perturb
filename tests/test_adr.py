@@ -590,6 +590,17 @@ def test_migrate_warns_with_the_status_segments_it_does_not_carry(annotation, ex
     assert warnings == expected_warnings
 
 
+def test_migrate_merges_status_line_and_body_line_relations():
+    text = (
+        "# ADR 0010 — Test\n\n"
+        "**Status:** accepted · 2026-09-10 · amends ADR 0008\n"
+        "**Amends:** ADR 0008, ADR 9\n\n"
+        "## Context\n\nPROSE.\n\n## Consequences\n\n- X happens.\n"
+    )
+    result, _ = migrate_adr(text, adr_id=10)
+    assert parse_adr(result).amends == ["adr:0008", "adr:0009"]
+
+
 def test_migrate_keeps_and_warns_about_a_partial_relation_line():
     line = "**Amends:** the module boundary half of [ADR 0003](0003-x.md)"
     text = (
