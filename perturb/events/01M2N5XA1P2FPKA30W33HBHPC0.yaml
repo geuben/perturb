@@ -7,4 +7,13 @@ summary: '#3 closed; this issue is now ready'
 detail: null
 proposed_by: perturb sync
 reason: blocks
-status: pending
+status: acknowledged
+ack:
+  at: '2026-09-16T13:40:08Z'
+  by: geuben
+  plan: tasks/adr-migrate-relation-lines.md
+  plan_blob: ec3db9c2cf2488073447191812e1f5bff3053db1
+  note: 'The scope event from plan:supersedes-ref-grammar is this plan''s whole subject
+    (cycles 2-6); its ''do not rewire the Supersedes branch'' condition is the plan''s
+    first scope cut. The unblock event is recorded in Context: #3''s amends/amended_by
+    keys and status-line parser are what cycles 2 and 6 build on.'
