@@ -93,6 +93,8 @@ author could not attach to anything is either general knowledge or not yet actio
 | `#N` mentioned in consequence text, not in `affects` | proposed | `mentions` |
 | ADR `supersedes: [adr:M]` → issues that acknowledged any event from `adr:M` | pending, kind `supersede` | `supersedes` |
 | ADR `supersedes: [adr:M#id]` → issues that acknowledged an event from consequence `id` of `adr:M` | pending, kind `supersede` | `supersedes` |
+| ADR `amends: [adr:M]` → issues that acknowledged any event from `adr:M` | pending, kind `amend` | `amends` |
+| ADR `amends: [adr:M#id]` → issues that acknowledged an event from consequence `id` of `adr:M` | pending, kind `amend` | `amends` |
 | `status` changed to `deprecated` | pending, kind `supersede`, to every acknowledger | `deprecated` |
 
 Editing a consequence's `text` changes the summary hash, so the next `propose` writes new events
@@ -113,6 +115,27 @@ supersedes: ["adr:0003#postgres-over-sqlite"]
 that consequence; issues that absorbed the ADR's other consequences hear nothing. The earlier ADR
 keeps `status: accepted`, since most of it is still in force. Supersede a whole ADR with
 `supersedes: ["adr:0003"]`, and give the old ADR `status: superseded` and `superseded_by`.
+
+## Amending an ADR
+
+A decision sometimes changes a premise or a clause of an earlier ADR while both records stay in
+force. Use `amends` on the new ADR and `amended_by` on the earlier one:
+
+```yaml
+# new ADR
+amends: ["adr:0008"]               # whole ADR, or "adr:0008#shape-ownership" for one consequence
+```
+
+```yaml
+# ADR 0008
+amended_by: ["adr:0021"]           # whole-ADR ref only; the earlier record keeps its status
+```
+
+`perturb propose` raises `amend` events to the issues that acknowledged events from the amended ADR
+(or consequence). The earlier ADR keeps `status: accepted`; the relation is informational.
+
+`extends` on a status line is read as `amends` by `perturb adr migrate`. Use `amends:` in
+front-matter — there is no separate `extends` key.
 
 ## Migration for existing ADRs
 

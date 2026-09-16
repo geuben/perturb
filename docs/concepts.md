@@ -65,6 +65,7 @@ status: pending
 | `scope` | something was cut from it or moved into it |
 | `friction` | implementation found a problem in code it touches |
 | `supersede` | the source replaces or invalidates part of it |
+| `amend` | the source changes a premise or clause of it; the earlier decision still stands |
 | `unblock` | a blocker closed; informational |
 
 ### Where events come from
@@ -72,7 +73,7 @@ status: pending
 | Source | Command | Status when created |
 |---|---|---|
 | a person or agent | `perturb push` | pending |
-| an ADR consequence naming issues in `affects:`, or an ADR `supersedes:` or deprecation | `perturb propose adr:<N>` | pending |
+| an ADR consequence naming issues in `affects:`, or an ADR `supersedes:`, `amends:`, or deprecation | `perturb propose adr:<N>` | pending |
 | an ADR consequence routed through areas or `#N` mentions | `perturb propose adr:<N>` | proposed |
 | a plan's decisions or scope cuts that mention other issues | `perturb propose plan:<slug>` | proposed |
 | a friction log's commits touching other areas | `perturb propose friction:<slug>` | proposed |

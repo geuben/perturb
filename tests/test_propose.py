@@ -1,4 +1,7 @@
+import dataclasses
 import types
+
+import pytest
 
 from perturb.adr import Adr, Consequence
 from perturb.areas import Area, AreaSet
@@ -1573,4 +1576,53 @@ def test_propose_sources_follow_the_configured_paths(tmp_path):
         ("audit:p", "#2", "reviews/p.md"),
         ("friction:p", "#2", "runs/p.log.md"),
         ("plan:p", "#2", "plans/p.md#design-decisions-locked"),
+    ]
+
+
+@pytest.mark.parametrize(
+    "amends, expected",
+    [
+        (
+            ["adr:0001#shape"],
+            [("#29", "Per-trip sync (amends adr:0001#shape)")],
+        ),
+        (
+            ["adr:0001"],
+            [("#29", "Per-trip sync"), ("#31", "Per-trip sync")],
+        ),
+    ],
+)
+def test_amends_targets_the_amended_adrs_acknowledgers(amends, expected):
+    from perturb.events import Event
+
+    def acked(eid, source, target, status="acknowledged"):
+        return Event(
+            id=eid,
+            at="2026-01-01T00:00:00Z",
+            source=source,
+            target=target,
+            kind="decision",
+            summary="Old decision",
+            detail=None,
+            proposed_by="geuben",
+            reason="affects",
+            status=status,
+        )
+
+    ack_events = [
+        acked("e1", "adr:0001#shape", "#29"),
+        acked("e2", "adr:0001#other", "#31"),
+        acked("e3", "adr:0001#shape", "#30"),  # closed
+    ]
+    adr = dataclasses.replace(_adr(adr_id=2), amends=amends)
+    candidates = compute_candidates(
+        adr, GRAPH_ISSUES, ack_events=ack_events, adr_rel_path="docs/adr/0002-per-trip.md"
+    )
+    result = [
+        (c["target"], c["kind"], c["reason"], c["status"], c["source"], c["detail"], c["summary"])
+        for c in candidates
+    ]
+    assert result == [
+        (t, "amend", "amends", "pending", "adr:0002", "docs/adr/0002-per-trip.md", s)
+        for t, s in expected
     ]
