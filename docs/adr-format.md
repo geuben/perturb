@@ -144,6 +144,9 @@ A one-off `perturb adr migrate docs/adr/0002-*.md`:
   consequence (`amends_invalid`, `amends_unresolved`);
 - every `amended_by` entry is `adr:NNNN` naming an ADR in the directory (no consequence anchor;
   `amended_by_unresolved`);
+- two-way symmetry: `amended_by: [adr:M]` on ADR N requires ADR M to list N (or N#id) in
+  `amends` (`amend_backlink`), and a resolved `amends` entry on ADR M requires ADR N to list M
+  in `amended_by` (`amended_by_missing`);
 - an ADR with `status: accepted` has at least one event, in any status, whose source is `adr:NNNN`
   or `adr:NNNN#<consequence>`, or it carries `no-propagation: true` (a YAML boolean) with a
   non-empty `no-propagation-reason`. `no-propagation: true` without a reason is itself a finding.

@@ -178,6 +178,40 @@ def adr_findings(adr_dir: Path, graph: dict, area_set: AreaSet | None = None) ->
                     }
                 )
 
+    # amended_by_missing: amends entry on M requires N to list M in amended_by
+    for adr in parsed.values():
+        own_number = adr.id
+        own = f"adr:{own_number:04d}"
+        for entry in adr.amends:
+            target_ref = parse_supersedes_ref(entry)
+            if target_ref is None:
+                continue  # already reported as amends_invalid
+            number, consequence_id = target_ref
+            target = parsed.get(number)
+            if target is None:
+                continue  # already reported as amends_unresolved
+            if consequence_id is not None and consequence_id not in {
+                c.id for c in target.consequences
+            }:
+                continue  # already reported as amends_unresolved
+            target_amended_by_numbers = {
+                parse_supersedes_ref(e)[0]
+                for e in target.amended_by
+                if parse_supersedes_ref(e) is not None and parse_supersedes_ref(e)[1] is None
+            }
+            if own_number not in target_amended_by_numbers:
+                findings.append(
+                    {
+                        "kind": "amended_by_missing",
+                        "ref": str(entry),
+                        "detail": (
+                            f"{own} amends {entry} but adr:{number:04d} "
+                            f"does not list {own} in amended_by"
+                        ),
+                        "fix": f"add {own} to amended_by in adr:{number:04d}",
+                    }
+                )
+
     # amend_backlink: amended_by adr:M requires ADR M to have amends entry for this ADR
     for adr in parsed.values():
         own_number = adr.id
