@@ -454,6 +454,46 @@ def test_no_propagation_flag_and_reason_are_parsed():
     assert outcome == expected
 
 
+_MIGRATE_TMPL = (
+    "# ADR 0021 — Resolution\n\n"
+    "**Status:** Accepted · 2026-09-10 · {annotation}\n\n"
+    "## Context\n\nPROSE.\n\n"
+    "## Consequences\n\n- X happens.\n"
+)
+
+
+@pytest.mark.parametrize(
+    "annotation, relations",
+    [
+        ("amends ADR 0008", (["adr:0008"], [])),
+        ("amends [ADR-0008](0008-shape.md)", (["adr:0008"], [])),
+        ("Extends ADR:4 and [0005](0005-x.md)", (["adr:0004", "adr:0005"], [])),
+        ("amends 8, ADR 9 & ADR-10", (["adr:0008", "adr:0009", "adr:0010"], [])),
+        (
+            "amends [ADR-0008](0008-shape.md) — an integration no longer solely owns the presented shape",
+            (["adr:0008"], []),
+        ),
+        ("extends ADR 0008: adds panel geometry", (["adr:0008"], [])),
+        ("amended by ADR 0021", ([], ["adr:0021"])),
+        ("resolution premise amended by 0021", ([], ["adr:0021"])),
+        ("extended to physical geometry by [0022](0022-panel-geometry.md)", ([], ["adr:0022"])),
+        ("amends ADR 0008 · amended by ADR 0023", (["adr:0008"], ["adr:0023"])),
+        # rejected forms — carry nothing
+        ("amends ADR-0002's premise", ([], [])),
+        ("amends ADR-0008#shape", ([], [])),
+        ("amends [the shape section](0008-shape.md#shape)", ([], [])),
+        ("amended by the 2024 review", ([], [])),
+        ("amended in review", ([], [])),
+        ("storage engine superseded by ADR 0005", ([], [])),
+    ],
+)
+def test_migrate_carries_whole_adr_relations_from_the_status_line(annotation, relations):
+    text = _MIGRATE_TMPL.format(annotation=annotation)
+    migrated, _ = migrate_adr(text, adr_id=21)
+    adr = parse_adr(migrated)
+    assert (adr.amends, adr.amended_by) == relations
+
+
 def test_amends_and_amended_by_are_parsed():
     base = (
         "---\nid: 2\ntitle: A title\nstatus: accepted\ndate: 2026-09-08\n"

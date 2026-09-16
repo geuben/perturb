@@ -146,9 +146,16 @@ A one-off `perturb adr migrate docs/adr/0002-*.md`:
    (`**Supersedes:** [ADR 0003](0003-x.md) and ADR 4`). Any other Supersedes line, such as "the
    storage half of ADR 0003", stays in the body with a warning; write the matching
    `adr:0003#<consequence-id>` entry by hand.
-3. Keep any prose between the status line and the first heading at the top of the body. An
+3. Carry status-line `amends`/`extends` and `amended by`/`extended … by` annotations that name
+   only whole ADR numbers into `amends:` and `amended_by:` in the front-matter. `extends` is read
+   as `amends`. Accepted forms: `amends ADR 0008`, `amends [ADR-0008](0008-shape.md)`,
+   `Extends ADR:4 and 0005`, `amended by ADR 0021`, `resolution premise amended by 0021`,
+   `extended to physical geometry by [0022](0022-panel-geometry.md)`. Anchored refs
+   (`amends ADR-0008#shape`), reason clauses before bare refs, and unrecognized annotations are
+   reported as warnings.
+4. Keep any prose between the status line and the first heading at the top of the body. An
    annotation on the status line itself is reported as a warning.
-4. Split the existing Consequences bullets into entries with generated ids from the first
+5. Split the existing Consequences bullets into entries with generated ids from the first
    noun phrase; the author renames them.
 5. Extract `#NNN` mentions in each bullet into that entry's `affects`, so nothing already in
    prose is lost.

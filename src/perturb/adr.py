@@ -45,6 +45,12 @@ _ISSUE_URL = re.compile(r"/issues/\d+")
 _PULL_REQUEST_BEFORE = re.compile(r"\b(?:PR|pull request)\s*$", re.IGNORECASE)
 _TITLE_PREFIX = re.compile(r"^ADR[\s-]*\d+\s*[:—–-]\s*", re.IGNORECASE)
 _STATUS_SEPARATORS = " \t·•|,;—–-"
+_SL_SEGMENT_SEP = re.compile(r"[·•|;]")
+_SL_REASON_SEP = re.compile(r" [—–] |: ")
+_SL_ADR_MATCH = re.compile(r"(?:ADR[\s:-]*)?\b(\d+)\b", re.IGNORECASE)
+_SL_AMENDS_VERB = re.compile(r"^(?:amends|extends)\s+", re.IGNORECASE)
+_SL_AMENDED_WORD = re.compile(r"\b(?:amended|extended)\b", re.IGNORECASE)
+_SL_BY_WORD = re.compile(r"\bby\b", re.IGNORECASE)
 
 
 def parse_supersedes_ref(entry) -> tuple[int, str | None] | None:
@@ -55,6 +61,52 @@ def parse_supersedes_ref(entry) -> tuple[int, str | None] | None:
     if m is None:
         return None
     return int(m.group(1)), m.group(2)
+
+
+def _whole_status_refs(text: str) -> list[int] | None:
+    """Return ADR numbers when `text` (after MD-link stripping) is a whole status-line ref list."""
+    plain = _MARKDOWN_LINK.sub(r"\1", text)
+    numbers = [int(m.group(1)) for m in _SL_ADR_MATCH.finditer(plain)]
+    if not numbers:
+        return None
+    rest = _SL_ADR_MATCH.sub("", plain)
+    rest = re.sub(r"\band\b|\s|[,&]", "", rest, flags=re.IGNORECASE)
+    return numbers if not rest else None
+
+
+def _parse_status_relations(annotation: str) -> tuple[list[str], list[str]]:
+    """Extract amends and amended_by from a status-line annotation."""
+    amends_out: list[str] = []
+    amended_by_out: list[str] = []
+    for seg in _SL_SEGMENT_SEP.split(annotation):
+        seg = seg.strip()
+        if not seg:
+            continue
+        m = _SL_AMENDS_VERB.match(seg)
+        if m:
+            rest = seg[m.end():]
+            text = _SL_REASON_SEP.split(rest, maxsplit=1)[0]
+            numbers = _whole_status_refs(text)
+            if numbers is not None:
+                for n in numbers:
+                    ref = f"adr:{n:04d}"
+                    if ref not in amends_out:
+                        amends_out.append(ref)
+            continue
+        if _SL_AMENDED_WORD.search(seg):
+            last_by = None
+            for m_by in _SL_BY_WORD.finditer(seg):
+                last_by = m_by
+            if last_by:
+                rest = seg[last_by.end():]
+                text = _SL_REASON_SEP.split(rest, maxsplit=1)[0]
+                numbers = _whole_status_refs(text)
+                if numbers is not None:
+                    for n in numbers:
+                        ref = f"adr:{n:04d}"
+                        if ref not in amended_by_out:
+                            amended_by_out.append(ref)
+    return amends_out, amended_by_out
 
 
 def _whole_adr_numbers(text: str) -> list[int] | None:
@@ -88,6 +140,8 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
     # Extract status and date from the **Status:** line
     status = ""
     date = ""
+    amends_from_status: list[str] = []
+    amended_by_from_status: list[str] = []
     for i, line in enumerate(lines):
         if "**Status:**" in line:
             carried.add(i)
@@ -108,6 +162,7 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
                 date = m_date.group(0)
                 rest = rest[: m_date.start()] + rest[m_date.end() :]
             annotation = rest.strip(_STATUS_SEPARATORS)
+            amends_from_status, amended_by_from_status = _parse_status_relations(annotation)
             if annotation:
                 warnings.append(
                     f"status line annotation not carried into the front-matter: {annotation}"
@@ -177,7 +232,9 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
 
     fm = (
         f"---\nid: {adr_id}\ntitle: {json.dumps(title, ensure_ascii=False)}\nstatus: {status}\n"
-        f"date: {date}\nsupersedes: {json.dumps(supersedes)}\nareas: []\n---\n"
+        f"date: {date}\nsupersedes: {json.dumps(supersedes)}\n"
+        f"amends: {json.dumps(amends_from_status)}\n"
+        f"amended_by: {json.dumps(amended_by_from_status)}\nareas: []\n---\n"
     )
     body = "\n".join(body_lines).rstrip("\n") + "\n" if body_lines else ""
     if preamble:
