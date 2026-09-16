@@ -275,8 +275,12 @@ def adr_findings(adr_dir: Path, graph: dict, area_set: AreaSet | None = None) ->
         target = parsed.get(target_id)
         if target is None:
             continue
-        expected_back = f"adr:{adr.id:04d}"
-        if expected_back not in target.supersedes:
+        target_supersedes_numbers = {
+            parse_supersedes_ref(e)[0]
+            for e in target.supersedes
+            if parse_supersedes_ref(e) is not None
+        }
+        if adr.id not in target_supersedes_numbers:
             findings.append(
                 {
                     "kind": "supersede_backlink",
