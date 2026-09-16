@@ -1650,6 +1650,53 @@ def test_amends_targets_the_amended_adrs_acknowledgers(amends, expected):
     ]
 
 
+def test_resolve_test_paths_warns_about_unresolved_ids():
+    import json
+    import types
+
+    envelope = {
+        "ok": True,
+        "envelope_version": 1,
+        "run": None,
+        "result": {
+            "plan": "tasks/my-plan.md",
+            "paths": [
+                {
+                    "cycle": 1,
+                    "field": "test",
+                    "id": "tests/test_propose.py::test_foo",
+                    "project": "perturb",
+                    "path": "tests/test_propose.py",
+                },
+            ],
+            "unresolved": [
+                {
+                    "cycle": 1,
+                    "field": "modifies_tests",
+                    "id": "adapter_host_catalog::test_name",
+                    "project": "perturb",
+                },
+            ],
+        },
+        "next_action": {"verb": "done", "terminal": True},
+    }
+
+    def fake_runner(argv, capture_output=True, text=True, cwd=None):
+        return types.SimpleNamespace(returncode=0, stdout=json.dumps(envelope), stderr="")
+
+    warnings = []
+    result = resolve_test_paths(
+        "tasks/my-plan.md",
+        runner=fake_runner,
+        repo_root="/repo",
+        warn=warnings.append,
+    )
+
+    assert result == {"tests/test_propose.py"}
+    assert len(warnings) == 1
+    assert "adapter_host_catalog::test_name" in warnings[0]
+
+
 def test_resolve_test_paths_warns_and_yields_nothing_when_tdd_unavailable():
     import json
     import types
