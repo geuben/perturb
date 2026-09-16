@@ -311,3 +311,19 @@ def test_unpropagated_accepted_adr_is_a_finding(tmp_path):
             ),
         }
     ]
+
+
+def test_check_reads_only_adr_named_files(tmp_path):
+    adr_dir = tmp_path / "docs" / "adr"
+    adr_dir.mkdir(parents=True)
+    (adr_dir / "0002-x.md").write_text(
+        _adr(2, "accepted", "no-propagation: true\nno-propagation-reason: prose only\n")
+    )
+    (adr_dir / "README.md").write_text(
+        "# ADRs\n\n| ADR | Status |\n|---|---|\n| [0002](0002-x.md) | accepted |\n"
+    )
+    (adr_dir / "template.md").write_text(_adr(0, "accepted"))
+    assert (
+        [(f["kind"], f["ref"]) for f in adr_findings(adr_dir, {"issues": {}})],
+        [(f["kind"], f["ref"]) for f in unpropagated_adr_findings(adr_dir, [])],
+    ) == ([], [])
