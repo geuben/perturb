@@ -131,7 +131,7 @@ def _status_warning_segments(annotation: str) -> list[str]:
                 if m_num:
                     n = int(m_num.group(1))
                     warn_segs.append(
-                        f'{seg}. To amend one consequence, add amends: ["adr:{n:04d}#<consequence-id>"]'
+                        f'{seg}. To amend one consequence, add amends: ["adr:{n:04d}#<consequence-id>"]'  # noqa: E501
                     )
                 else:
                     warn_segs.append(seg)
