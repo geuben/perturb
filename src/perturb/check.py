@@ -261,22 +261,46 @@ def adr_findings(adr_dir: Path, graph: dict, area_set: AreaSet | None = None) ->
                     }
                 )
 
-    # Backlink check: superseded_by target must list this ADR in its supersedes
+    # superseded_by resolution and backlink check
     for adr in parsed.values():
         if not adr.superseded_by:
             continue
-        try:
-            target_ref = parse_ref(adr.superseded_by)
-        except RefError:
+        own = f"adr:{adr.id:04d}"
+        sb_ref = parse_supersedes_ref(adr.superseded_by)
+        if sb_ref is None or sb_ref[1] is not None:
+            findings.append(
+                {
+                    "kind": "superseded_by_unresolved",
+                    "ref": str(adr.superseded_by),
+                    "detail": (
+                        f"{own} has superseded_by {adr.superseded_by!r}, "
+                        f"which is not a whole-ADR ref adr:NNNN naming an ADR in {adr_dir}"
+                    ),
+                    "fix": f"write superseded_by as adr:NNNN naming the superseding ADR in {own}",
+                }
+            )
             continue
-        if target_ref.kind != "adr":
-            continue
-        target_id = int(target_ref.id)
+        target_id, _ = sb_ref
         target = parsed.get(target_id)
         if target is None:
+            findings.append(
+                {
+                    "kind": "superseded_by_unresolved",
+                    "ref": str(adr.superseded_by),
+                    "detail": (
+                        f"{own} has superseded_by {adr.superseded_by!r}, "
+                        f"which is not a whole-ADR ref adr:NNNN naming an ADR in {adr_dir}"
+                    ),
+                    "fix": f"write superseded_by as adr:NNNN naming the superseding ADR in {own}",
+                }
+            )
             continue
-        expected_back = f"adr:{adr.id:04d}"
-        if expected_back not in target.supersedes:
+        target_supersedes_numbers = {
+            parse_supersedes_ref(e)[0]
+            for e in target.supersedes
+            if parse_supersedes_ref(e) is not None
+        }
+        if adr.id not in target_supersedes_numbers:
             findings.append(
                 {
                     "kind": "supersede_backlink",
