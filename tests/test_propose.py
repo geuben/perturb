@@ -1650,10 +1650,13 @@ def test_amends_targets_the_amended_adrs_acknowledgers(amends, expected):
 
 
 def test_plan_declares_test_ids_across_every_id_field():
+    def plan(cycle_yaml):
+        return f"---\ncycles:\n  - n: 1\n    {cycle_yaml}\n    files: [src/a.py]\n---\n"
+
     cases = [
-        ("---\ncycles:\n  - n: 1\n    test: tests/test_a.py::test_foo\n    files: [src/a.py]\n---\n", True),
-        ("---\ncycles:\n  - n: 1\n    tests: [tests/test_a.py::test_foo, tests/test_b.py::test_bar]\n    files: [src/a.py]\n---\n", True),
-        ("---\ncycles:\n  - n: 1\n    modifies_tests: [tests/test_a.py::test_old]\n    files: [src/a.py]\n---\n", True),
+        (plan("test: tests/test_a.py::test_foo"), True),
+        (plan("tests: [tests/test_a.py::test_foo, tests/test_b.py::test_bar]"), True),
+        (plan("modifies_tests: [tests/test_a.py::test_old]"), True),
         ("---\ncycles:\n  - n: 1\n    files: [src/a.py]\n---\n", False),
     ]
     for plan_text, expected in cases:
