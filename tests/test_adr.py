@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from perturb.adr import (
@@ -199,6 +201,32 @@ def test_migrate_keeps_and_warns_about_a_partial_supersedes_line():
     assert line in result.split("## Context")[0]
     assert len(warnings) == 1
     assert "Supersedes" in warnings[0] and "adr:0003#" in warnings[0]
+
+
+@pytest.mark.parametrize(
+    "named, example",
+    [
+        ("the storage engine half of [ADR 0003](0003-x.md)", "adr:0003#"),
+        ("ADR-0003#postgres", "adr:0003#"),
+        ("ADR 0003's storage half", "adr:0003#"),
+        ("the 2024 plan", "adr:NNNN#"),
+        ("[the storage decision](0003-x.md)", "adr:NNNN#"),
+        ("3.5", "adr:NNNN#"),
+    ],
+)
+def test_migrate_keeps_a_supersedes_line_that_does_not_name_only_whole_adrs(named, example):
+    text = (
+        "# ADR 0006 — Use DuckDB\n\n"
+        "**Status:** accepted · 2026-09-10\n"
+        f"**Supersedes:** {named}\n\n"
+        "## Context\n\nPROSE.\n\n## Consequences\n\n- X happens.\n"
+    )
+    result, warnings = migrate_adr(text, adr_id=6)
+    assert (
+        parse_adr(result).supersedes,
+        "**Supersedes:**" in result.split("## Context")[0],
+        re.search(r"adr:(?:NNNN|\d{4})#", warnings[0]).group(0),
+    ) == ([], True, example)
 
 
 def test_migrate_keeps_preamble_prose_and_warns_about_a_status_annotation():
