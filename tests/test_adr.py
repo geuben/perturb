@@ -481,6 +481,16 @@ def test_superseded_by_is_parsed():
     assert adr.superseded_by == "adr:0001"
 
 
+def test_a_one_element_list_superseded_by_is_normalised():
+    text = (
+        "---\nid: 2\ntitle: A title\nstatus: superseded\ndate: 2026-09-08\n"
+        'superseded_by: ["adr:0007"]\n---\n\n'
+        "## Consequences\n\n```yaml\n- id: v\n  text: Some text.\n  kind: decision\n```\n"
+    )
+    adr = parse_adr(text)
+    assert adr.superseded_by == "adr:0007"
+
+
 def test_no_propagation_flag_and_reason_are_parsed():
     base = (
         "---\nid: 2\ntitle: A title\nstatus: accepted\ndate: 2026-09-08\n"
