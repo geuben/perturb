@@ -2694,3 +2694,90 @@ def test_push_verb_accepts_the_amend_kind(tmp_path):
     )
     events = EventStore(tmp_path / "perturb" / "events").load().events
     assert (code, [e.kind for e in events]) == (0, ["amend"])
+
+
+def test_propose_friction_counts_modifies_tests_as_declared(tmp_path, capsys):
+    repo = tmp_path / "repo"
+    perturb_root = repo / ".perturb"
+    perturb_root.mkdir(parents=True)
+
+    (repo / "tasks" / "friction-logs").mkdir(parents=True)
+    (repo / "tasks" / "friction-logs" / "mt-friction.md").write_text(
+        "  - `deadbeef1` [green] feat: something (1 files)\n"
+    )
+    (repo / "tasks" / "mt.md").write_text(
+        "---\n"
+        "closes: 48\n"
+        "cycles:\n"
+        "  - n: 1\n"
+        "    modifies_tests: [tests/test_show.py::test_old]\n"
+        '    files: ["src/alpha/new.py"]\n'
+        "---\n"
+        "body\n"
+    )
+    (repo / "perturb").mkdir(exist_ok=True)
+    (repo / "perturb" / "areas.yaml").write_text(
+        "areas:\n"
+        "  alpha:\n"
+        "    paths:\n"
+        '      - "src/alpha/**"\n'
+        "  tests:\n"
+        "    paths:\n"
+        '      - "tests/**"\n'
+    )
+
+    issue_70 = _make_issue_node(70, title="Issue 70", labels=["area:tests"])
+    tdd_envelope = json.dumps(
+        {
+            "ok": True,
+            "envelope_version": 1,
+            "run": None,
+            "result": {
+                "plan": "tasks/mt.md",
+                "paths": [
+                    {
+                        "cycle": 1,
+                        "field": "modifies_tests",
+                        "id": "tests/test_show.py::test_old",
+                        "project": "perturb",
+                        "path": "tests/test_show.py",
+                    }
+                ],
+                "unresolved": [],
+            },
+            "next_action": {"verb": "done", "terminal": True},
+        }
+    )
+
+    class FrictionTransport:
+        def __init__(self):
+            self._pages = [_make_page([issue_70])]
+            self._idx = 0
+
+        def runner(self, argv, capture_output=True, text=True, cwd=None):
+            if argv[:3] == ["git", "config", "--get"]:
+                return _make_runner_result(0, "https://github.com/geuben/x\n")
+            if argv == ["git", "rev-parse", "HEAD"]:
+                return _make_runner_result(0, "abc123\n")
+            if argv == ["git", "show", "--name-only", "--format=", "deadbeef1"]:
+                return _make_runner_result(0, "tests/test_show.py\n")
+            if argv == ["tdd", "plan", "paths", "tasks/mt.md", "--json"]:
+                return _make_runner_result(0, tdd_envelope)
+            raise AssertionError(f"unexpected argv: {argv!r}")
+
+        def graphql(self, query, variables):
+            page = self._pages[self._idx]
+            self._idx += 1
+            return page
+
+    transport = FrictionTransport()
+    code = main(
+        ["propose", "friction:mt", "--by", "geuben", "--json"],
+        transport=transport,
+        root=perturb_root,
+        repo_root=repo,
+    )
+    assert code == 0
+    envelope = json.loads(capsys.readouterr().out)
+    assert envelope["ok"] is True
+    assert len(envelope["data"]["proposed"]) == 0
