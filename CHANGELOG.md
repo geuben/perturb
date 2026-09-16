@@ -17,6 +17,11 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 - **Check findings for amends/amended_by symmetry:** `amends_invalid`, `amends_unresolved`,
   `amended_by_unresolved`, `amend_backlink`, and `amended_by_missing` — analogous to the existing
   supersedes findings.
+- **`perturb adr migrate` carries a `**Supersedes:**` line that names ADRs by bare number.**
+  `**Supersedes:** 0003`, `**Supersedes:** [0003](0003-x.md) and 4`, and `**Supersedes:** 0003; 0004`
+  are now carried into `supersedes:` front-matter, matching the existing behaviour for `ADR`-prefixed
+  refs.
+
 - **`perturb adr migrate` carries `amends`/`amended_by` from the status line.** Bare
   `amends ADR NNNN`, `amended by ADR NNNN`, `extends ADR NNNN`, and list forms
   (`amends ADR 4 and 0005`) are carried into front-matter; anchored refs and segments with

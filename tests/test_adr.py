@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from perturb.adr import (
@@ -199,6 +201,56 @@ def test_migrate_keeps_and_warns_about_a_partial_supersedes_line():
     assert line in result.split("## Context")[0]
     assert len(warnings) == 1
     assert "Supersedes" in warnings[0] and "adr:0003#" in warnings[0]
+
+
+@pytest.mark.parametrize(
+    "named, example",
+    [
+        ("the storage engine half of [ADR 0003](0003-x.md)", "adr:0003#"),
+        ("ADR-0003#postgres", "adr:0003#"),
+        ("ADR 0003's storage half", "adr:0003#"),
+        ("the 2024 plan", "adr:NNNN#"),
+        ("[the storage decision](0003-x.md)", "adr:NNNN#"),
+        ("3.5", "adr:NNNN#"),
+    ],
+)
+def test_migrate_keeps_a_supersedes_line_that_does_not_name_only_whole_adrs(named, example):
+    text = (
+        "# ADR 0006 — Use DuckDB\n\n"
+        "**Status:** accepted · 2026-09-10\n"
+        f"**Supersedes:** {named}\n\n"
+        "## Context\n\nPROSE.\n\n## Consequences\n\n- X happens.\n"
+    )
+    result, warnings = migrate_adr(text, adr_id=6)
+    assert (
+        parse_adr(result).supersedes,
+        "**Supersedes:**" in result.split("## Context")[0],
+        re.search(r"adr:(?:NNNN|\d{4})#", warnings[0]).group(0),
+    ) == ([], True, example)
+
+
+@pytest.mark.parametrize(
+    "named, supersedes",
+    [
+        ("ADR 0003", ["adr:0003"]),
+        ("[ADR-0003](0003-x.md) and ADR 4", ["adr:0003", "adr:0004"]),
+        ("ADR 3.", ["adr:0003"]),
+        ("0003", ["adr:0003"]),
+        ("3", ["adr:0003"]),
+        ("[0003](0003-typescript-stack.md)", ["adr:0003"]),
+        ("0003, [0004](0004-y.md) & ADR:5", ["adr:0003", "adr:0004", "adr:0005"]),
+        ("ADR 0003 and 0004", ["adr:0003", "adr:0004"]),
+        ("0003; 0004", ["adr:0003", "adr:0004"]),
+    ],
+)
+def test_migrate_carries_a_supersedes_line_in_every_whole_adr_ref_form(named, supersedes):
+    text = (
+        "# ADR 0006 — Use DuckDB\n\n"
+        "**Status:** accepted · 2026-09-10\n"
+        f"**Supersedes:** {named}\n\n"
+        "## Context\n\nPROSE.\n\n## Consequences\n\n- X happens.\n"
+    )
+    assert parse_adr(migrate_adr(text, adr_id=6)[0]).supersedes == supersedes
 
 
 def test_migrate_keeps_preamble_prose_and_warns_about_a_status_annotation():

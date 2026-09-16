@@ -39,6 +39,7 @@ class Adr:
 
 _SUPERSEDES_REF = re.compile(r"adr:(\d+)(?:#([A-Za-z0-9][\w.-]*))?")
 _PROSE_ADR_REF = re.compile(r"\bADR[\s:-]*(\d+)", re.IGNORECASE)
+_WHOLE_ADR_REF = re.compile(r"(?<![\w#])(?:ADR[\s:-]*)?(\d+)(?![\w#])", re.IGNORECASE)
 _MARKDOWN_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
 _MARKDOWN_LINK_TARGET = re.compile(r"\[([^\]]*)\]\(([^)]*)\)")
 _ISSUE_URL = re.compile(r"/issues/\d+")
@@ -158,9 +159,11 @@ def _status_warning_segments(annotation: str) -> list[str]:
 
 def _whole_adr_numbers(text: str) -> list[int] | None:
     """The ADR numbers a prose Supersedes line names, when it names nothing but whole ADRs."""
-    plain = _MARKDOWN_LINK.sub(r"\1", text)
-    numbers = [int(n) for n in _PROSE_ADR_REF.findall(plain)]
-    rest = re.sub(r"\band\b|[,;&.\s]", "", _PROSE_ADR_REF.sub("", plain), flags=re.IGNORECASE)
+    plain = _MARKDOWN_LINK.sub(r"\1", text).strip()
+    if plain.endswith("."):
+        plain = plain[:-1]
+    numbers = [int(m.group(1)) for m in _WHOLE_ADR_REF.finditer(plain)]
+    rest = re.sub(r"\band\b|[,;&\s]", "", _WHOLE_ADR_REF.sub("", plain), flags=re.IGNORECASE)
     return numbers if numbers and not rest else None
 
 

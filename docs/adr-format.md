@@ -142,10 +142,10 @@ front-matter — there is no separate `extends` key.
 A one-off `perturb adr migrate docs/adr/0002-*.md`:
 
 1. Parse the title line, status line and date.
-2. Carry a `**Supersedes:**` line into `supersedes` when it names only whole ADRs
-   (`**Supersedes:** [ADR 0003](0003-x.md) and ADR 4`). Any other Supersedes line, such as "the
-   storage half of ADR 0003", stays in the body with a warning; write the matching
-   `adr:0003#<consequence-id>` entry by hand.
+2. Carry a `**Supersedes:**` line into `supersedes` when it names only whole ADRs — with or
+   without the `ADR` prefix (`**Supersedes:** [0003](0003-x.md) and ADR 4`). Any other Supersedes
+   line, such as "the storage half of ADR 0003", stays in the body with a warning; write the
+   matching `adr:0003#<consequence-id>` entry by hand.
 3. Carry status-line `amends`/`extends` and `amended by`/`extended … by` annotations that name
    only whole ADR numbers into `amends:` and `amended_by:` in the front-matter. `extends` is read
    as `amends`. Accepted forms: `amends ADR 0008`, `amends [ADR-0008](0008-shape.md)`,
