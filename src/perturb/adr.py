@@ -270,30 +270,22 @@ def migrate_adr(text: str, adr_id: int) -> tuple[str, list[str]]:
         named += continuation
         label_text = line[:line.index(":**") + 3]
         m_reason = _BODY_REASON_SEP.search(named)
-        if m_reason:
-            head = named[:m_reason.start()]
-            reason = named[m_reason.start():].strip()
-            numbers = _whole_adr_numbers(head)
-            if numbers is not None:
-                refs = [f"adr:{n:04d}" for n in numbers]
-                if verb in ("amends", "extends"):
-                    amends_from_body.extend(r for r in refs if r not in amends_from_body)
-                else:
-                    amended_by_from_body.extend(r for r in refs if r not in amended_by_from_body)
-                warnings.append(
-                    f"{label_text} line kept in body, reason clause not absorbed: {reason}"
-                )
+        head = named[:m_reason.start()] if m_reason else named
+        reason = named[m_reason.start():].strip() if m_reason else None
+        numbers = _whole_adr_numbers(head)
+        if numbers is None:
+            continue
+        refs = [f"adr:{n:04d}" for n in numbers]
+        target = amends_from_body if verb in ("amends", "extends") else amended_by_from_body
+        target.extend(r for r in refs if r not in target)
+        if reason is not None:
+            warnings.append(
+                f"{label_text} line kept in body, reason clause not absorbed: {reason}"
+            )
         else:
-            numbers = _whole_adr_numbers(named)
-            if numbers is not None:
-                refs = [f"adr:{n:04d}" for n in numbers]
-                if verb in ("amends", "extends"):
-                    amends_from_body.extend(r for r in refs if r not in amends_from_body)
-                else:
-                    amended_by_from_body.extend(r for r in refs if r not in amended_by_from_body)
-                carried.add(i)
-                for j in cont_indices:
-                    carried.add(j)
+            carried.add(i)
+            for j in cont_indices:
+                carried.add(j)
 
     preamble = [line for i, line in enumerate(lines[:first_heading]) if i not in carried]
     while preamble and not preamble[0].strip():
