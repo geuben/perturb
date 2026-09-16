@@ -3,7 +3,7 @@ from pathlib import Path
 
 import yaml
 
-from perturb.adr import parse_supersedes_ref
+from perturb.adr import classify_adr_filename, parse_supersedes_ref
 from perturb.areas import load_areas, read_plan_areas
 from perturb.config import Config
 from perturb.envelope import Refusal
@@ -277,11 +277,16 @@ def propose(
 
 def resolve_adr_path(repo_root, ref_id):
     try:
-        padded = f"{int(ref_id):04d}"
+        ref_int = int(ref_id)
     except ValueError:
         raise Refusal("adr_not_found", f"cannot parse ADR ref: {ref_id!r}") from None
 
-    matches = list(Path(repo_root).glob(f"docs/adr/{padded}-*.md"))
+    padded = f"{ref_int:04d}"
+    matches = [
+        p
+        for p in sorted(Path(repo_root, "docs", "adr").glob("*.md"))
+        if classify_adr_filename(p.name) == ("adr", ref_int)
+    ]
     if not matches:
         raise Refusal("adr_not_found", f"no ADR file found for {padded}")
     if len(matches) > 1:

@@ -189,6 +189,8 @@ Lint, intended for CI. Non-zero when:
 
 - an ADR fails the validation in [adr-format.md](adr-format.md#validation-in-perturb-check),
   including an accepted ADR with no events and no `no-propagation: true` flag with a reason;
+- a Markdown file in `docs/adr` starts with a number but is not named `NNNN-<title>.md` (e.g.
+  `2-x.md` or `0002_x.md`) — rename it to the four-digit padded form `perturb propose adr:` uses;
 - an event targets a closed issue and is still pending;
 - an event's `detail` anchor no longer resolves;
 - a ready-to-implement issue is stale.
