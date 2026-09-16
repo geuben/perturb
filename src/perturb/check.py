@@ -13,7 +13,21 @@ def adr_findings(adr_dir: Path, graph: dict, area_set: AreaSet | None = None) ->
     parsed: dict[int, Adr] = {}
 
     for path in sorted(adr_dir.glob("*.md")):
-        if classify_adr_filename(path.name)[0] != "adr":
+        kind, n = classify_adr_filename(path.name)
+        if kind == "near_miss":
+            findings.append(
+                {
+                    "kind": "adr_filename",
+                    "ref": path.name,
+                    "detail": (
+                        f"{path.name} starts with an ADR number but propose adr:{n:04d} "
+                        f"looks for {n:04d}-<title>.md"
+                    ),
+                    "fix": f"rename {path.name} to {n:04d}-<title>.md",
+                }
+            )
+            continue
+        if kind != "adr":
             continue
         try:
             adr = parse_adr(path.read_text())
