@@ -318,3 +318,7 @@ def _parse_consequences(lines: list) -> list:
             )
         )
     return result
+
+
+def classify_adr_filename(name: str) -> tuple[str, int | None]:
+    return ("other", None)
