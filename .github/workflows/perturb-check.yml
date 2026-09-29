@@ -18,7 +18,7 @@ jobs:
           persist-credentials: false
           # stale detection reads each plan's last commit time from git log
           fetch-depth: 0
-      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: perturb check
         # the sync calls gh (PERTURB_GH unset), which authenticates with the workflow token
         env:
