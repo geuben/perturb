@@ -247,7 +247,8 @@ is how agents drive it (see [agents.md](agents.md)). Nothing other
 than an explicit `affects` or `supersedes`, or an issue the auditor accepts in
 `propose audit: --review`, is ever born `pending`. A no-target item that already has such an
 issue is listed under `already_raised` and never offered again. A failed `gh issue create`
-refuses with `github_error`.
+refuses with `github_error`. An ADR that does not parse refuses with the parser's reason (e.g.
+`consequence_comment`, `affects_comment`, `bad_consequences`).
 
 ### `perturb confirm <event-id>... | --source <ref> --all`
 `proposed → pending`.

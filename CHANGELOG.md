@@ -6,6 +6,15 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **An unquoted `#N` in a consequence no longer silently truncates or drops.** A mid-sentence
+  ` #` in a plain `text` value, or an unquoted `#N` in `affects`, used to be read as a YAML
+  comment: the text was cut off and the mention or ref vanished. `perturb` now refuses the ADR
+  (`consequence_comment` / `affects_comment`), and `perturb check` reports each as its own
+  finding. A Consequences block that is not valid YAML is an `adr_parse` finding and a `propose`
+  refusal, not a traceback; `propose adr:` refuses any ADR that does not parse. Closes #28.
+
 ## [0.0.2] - 2026-09-16
 
 ### Added
