@@ -820,3 +820,12 @@ def test_consequence_forms_that_keep_a_hash_parse_whole():
         c = parse_adr(_adr_with_consequences(body)).consequences[0]
         got.append((c.text, c.affects))
     assert got == [expected for _, expected in rows]
+
+
+def test_migrate_quotes_a_text_with_a_mid_sentence_mention():
+    src = (
+        "# ADR 0005 — Mentions\n\n**Status:** accepted · 2026-09-13\n\n## Consequences\n\n"
+        "- General knowledge, which happens to mention #7 in passing.\n"
+    )
+    adr = parse_adr(migrate_adr(src, adr_id=5)[0])
+    assert adr.consequences[0].text == "General knowledge, which happens to mention #7 in passing."
