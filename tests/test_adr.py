@@ -877,3 +877,18 @@ def test_a_value_lost_to_a_yaml_comment_is_refused():
         else:
             got.append(None)
     assert got == [expected for _, expected in rows]
+
+
+def test_a_consequences_block_that_is_not_yaml_is_refused():
+    hint = "an unquoted ' #' starts a YAML comment, so put any text containing one in double quotes"
+    bodies = [
+        "- id: g\n  text: Backfilled days, see #29\n    and never re-priced.\n",
+        "- id: g\n  text: mentions\t#7 here.\n",
+    ]
+    got = []
+    for body in bodies:
+        try:
+            parse_adr(_adr_with_consequences(body))
+        except AdrError as exc:
+            got.append((exc.reason, exc.detail.endswith(hint)))
+    assert got == [("bad_consequences", True), ("bad_consequences", True)]
