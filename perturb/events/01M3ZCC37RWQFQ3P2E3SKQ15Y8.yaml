@@ -1,0 +1,25 @@
+id: 01M3ZCC37RWQFQ3P2E3SKQ15Y8
+at: '2026-10-02T22:39:47Z'
+source: plan:consequence-yaml-comments
+target: '#29'
+kind: decision
+summary: '**Detection is by node position, not by scanning raw lines.** Compose the
+  *same fence-stripped string* that `_parse_consequences` loads (`yaml.compose(stripped)`),
+  walk each consequence mapping, and for the `text` value node: if `node.style is
+  None` (plain) and `stripped.split("\n")[node.end_mark.line][node.end_mark.column:]`
+  matches `^\s+#`, refuse. Footgun: `end_mark` line/column are relative to the composed
+  string, so composing the whole file, or the fenced text, gives wrong positions.
+  Quoted (`''`, `"`) and block (`|`, `>`) scalars have a non-`None` style and are
+  never flagged, which is how cycle 1''s accepted forms stay accepted. A raw " ` #`
+  in the line" scan would wrongly flag them. Decided from evidence: a probe showed
+  a multi-line plain scalar''s `end_mark` sits on its last line, at the comment (`''
+  #29 for the split.''`).'
+detail: tasks/consequence-yaml-comments.md#design-decisions-locked
+proposed_by: geuben
+reason: mentions
+status: dismissed
+ack:
+  at: '2026-10-02T22:39:59Z'
+  by: geuben
+  note: 'false match: ''#29'' is example text in a probe row, not a reference to issue
+    29'
