@@ -502,7 +502,49 @@ def _parse_consequences(lines: list) -> list:
                 kind=entry.get("kind", "decision"),
             )
         )
+    _refuse_values_lost_to_comments(stripped)
     return result
+
+
+_NULL_TAG = "tag:yaml.org,2002:null"
+
+
+def _refuse_values_lost_to_comments(stripped: str) -> None:
+    """Refuse a plain `text` cut off by a ` #` comment, or an `affects` ref lost to one.
+
+    Positions come from composing `stripped` itself, so marks index into its lines."""
+    root = yaml.compose(stripped)
+    if root is None:
+        return
+    source = stripped.split("\n")
+    for item in root.value:
+        if not isinstance(item, yaml.MappingNode):
+            continue
+        fields = {key.value: (key, value) for key, value in item.value}
+        cid = fields["id"][1].value if "id" in fields else None
+        if "text" in fields:
+            _, text = fields["text"]
+            rest = source[text.end_mark.line][text.end_mark.column :]
+            if text.style is None and re.match(r"\s+#", rest):
+                tail = rest.lstrip().rstrip()
+                raise AdrError(
+                    "consequence_comment",
+                    f"consequence '{cid}' text is cut off at a YAML comment, "
+                    f"dropping '{tail}'; put the text in double quotes",
+                )
+        if "affects" in fields:
+            key, affects = fields["affects"]
+            if isinstance(affects, yaml.SequenceNode):
+                lost = any(ref.tag == _NULL_TAG for ref in affects.value)
+            else:
+                after_key = source[key.end_mark.line][key.end_mark.column :]
+                lost = affects.tag == _NULL_TAG and re.match(r":[ \t]+#\d", after_key) is not None
+            if lost:
+                raise AdrError(
+                    "affects_comment",
+                    f"consequence '{cid}' has an affects entry lost to a YAML comment; "
+                    'write each issue ref as "#N"',
+                )
 
 
 def classify_adr_filename(name: str) -> tuple[str, int | None]:
