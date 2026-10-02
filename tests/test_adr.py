@@ -832,7 +832,7 @@ def test_migrate_quotes_a_text_with_a_mid_sentence_mention():
 
 
 def test_a_value_lost_to_a_yaml_comment_is_refused():
-    affects_detail = "has an affects entry lost to a YAML comment; write each issue ref as \"#N\""
+    affects_detail = 'has an affects entry lost to a YAML comment; write each issue ref as "#N"'
     rows = [
         (
             "- id: general\n  text: General knowledge, which happens to mention #7 in passing.\n",
