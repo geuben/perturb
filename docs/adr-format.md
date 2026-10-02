@@ -68,7 +68,11 @@ areas: [rides, fares, rollup]
 Consequences are a YAML list inside a fenced `yaml` block; `adr migrate` writes that
 form. An unfenced list of the same shape also parses, but the fence keeps GitHub from rendering
 it as prose bullets. It is real YAML: a `text` that starts with a backtick or other YAML
-indicator must be quoted.
+indicator must be quoted. A ` #` anywhere in an unquoted `text` starts a YAML comment, so a
+`text` that names an issue mid-sentence must be double-quoted
+(`text: "Backfilled days, see #29 for the split."`). An issue ref in `affects` is always written
+`"#N"`. `perturb` refuses an ADR where either was lost to a comment (`consequence_comment`,
+`affects_comment`).
 
 Fields per consequence:
 
