@@ -1,0 +1,13 @@
+id: 01M3ZCC29DF3XDH2CAPHN5H4TF
+at: '2026-10-02T22:39:46Z'
+source: '#28'
+target: '#29'
+kind: decision
+summary: 'The #28 plan wraps any YAML error in the Consequences block as AdrError
+  bad_consequences (an adr_parse finding in check) and makes propose adr: refuse with
+  the parser''s reason, so #29 only needs to decide how prose before the fence is
+  handled.'
+detail: tasks/consequence-yaml-comments.md#design-decisions-locked
+proposed_by: geuben
+reason: manual
+status: pending

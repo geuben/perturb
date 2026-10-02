@@ -1,0 +1,22 @@
+id: 01M3ZCC37ZYV42EVTG8F2VX10E
+at: '2026-10-02T22:39:47Z'
+source: plan:consequence-yaml-comments
+target: '#29'
+kind: scope
+summary: '**Prose before the fence under `## Consequences` (#29''s own case) gets
+  no dedicated kind or hint, and is not skipped.** Premise: named non-goal. It is
+  a separate open issue (#29) with an open design question (a dedicated finding kind,
+  or ignoring prose outside the fence), and #28 does not raise it. After this plan,
+  #29''s input gets decision 5''s `bad_consequences` refusal (`adr_parse` in `check`,
+  a refusal in `propose`) rather than a traceback. Re-evaluation trigger: if a cycle
+  would have to change how text outside the fence is read in order to go green, stop
+  and raise a `plan_defect` blocker.'
+detail: tasks/consequence-yaml-comments.md#deliberate-scope-cuts-do-not-build
+proposed_by: geuben
+reason: mentions
+status: dismissed
+ack:
+  at: '2026-10-02T22:39:59Z'
+  by: geuben
+  note: covered by the scoped push 01M3ZCC29DF3XDH2CAPHN5H4TF; the sliced summary
+    is too long to be useful
