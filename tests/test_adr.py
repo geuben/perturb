@@ -829,3 +829,51 @@ def test_migrate_quotes_a_text_with_a_mid_sentence_mention():
     )
     adr = parse_adr(migrate_adr(src, adr_id=5)[0])
     assert adr.consequences[0].text == "General knowledge, which happens to mention #7 in passing."
+
+
+def test_a_value_lost_to_a_yaml_comment_is_refused():
+    affects_detail = "has an affects entry lost to a YAML comment; write each issue ref as \"#N\""
+    rows = [
+        (
+            "- id: general\n  text: General knowledge, which happens to mention #7 in passing.\n",
+            (
+                "consequence_comment",
+                "consequence 'general' text is cut off at a YAML comment, dropping "
+                "'#7 in passing.'; put the text in double quotes",
+            ),
+        ),
+        (
+            "- id: note\n  text: Plain sentence.  # TODO\n",
+            (
+                "consequence_comment",
+                "consequence 'note' text is cut off at a YAML comment, dropping "
+                "'# TODO'; put the text in double quotes",
+            ),
+        ),
+        (
+            "- id: backfill\n  text: Backfilled days remain daily-grain,\n"
+            "    see #29 for the split.\n",
+            (
+                "consequence_comment",
+                "consequence 'backfill' text is cut off at a YAML comment, dropping "
+                "'#29 for the split.'; put the text in double quotes",
+            ),
+        ),
+        (
+            "- id: dst\n  text: t\n  affects:\n    - #7\n",
+            ("affects_comment", f"consequence 'dst' {affects_detail}"),
+        ),
+        (
+            "- id: refund\n  text: t\n  affects: #7\n",
+            ("affects_comment", f"consequence 'refund' {affects_detail}"),
+        ),
+    ]
+    got = []
+    for body, _ in rows:
+        try:
+            parse_adr(_adr_with_consequences(body))
+        except AdrError as exc:
+            got.append((exc.reason, exc.detail))
+        else:
+            got.append(None)
+    assert got == [expected for _, expected in rows]
