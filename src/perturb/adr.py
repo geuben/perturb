@@ -454,6 +454,11 @@ def parse_adr(text: str) -> Adr:
     )
 
 
+_COMMENT_HINT = (
+    "an unquoted ' #' starts a YAML comment, so put any text containing one in double quotes"
+)
+
+
 def _parse_consequences(lines: list) -> list:
     in_section = False
     section_lines = []
@@ -475,7 +480,13 @@ def _parse_consequences(lines: list) -> list:
         if stripped.endswith("```"):
             stripped = stripped[: stripped.rfind("```")]
 
-    entries = yaml.safe_load(stripped) or []
+    try:
+        entries = yaml.safe_load(stripped) or []
+    except yaml.YAMLError as exc:
+        raise AdrError(
+            "bad_consequences",
+            f"Consequences block is not valid YAML: {str(exc).splitlines()[0]}; {_COMMENT_HINT}",
+        ) from exc
     if not isinstance(entries, list):
         raise AdrError("bad_consequences", "Consequences block must be a YAML list")
     result = []
