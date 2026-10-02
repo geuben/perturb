@@ -787,3 +787,36 @@ def test_adr_filenames_are_classified_by_what_propose_can_resolve():
     ]
     for name, expected in adr_cases + near_miss_cases + other_cases:
         assert classify_adr_filename(name) == expected, f"{name!r}"
+
+
+def _adr_with_consequences(body: str) -> str:
+    return (
+        "---\nid: 1\ntitle: T\nstatus: accepted\ndate: 2026-01-01\nsupersedes: []\n"
+        "areas: []\n---\n\n## Context\nx\n\n## Decision\ny\n\n## Consequences\n\n```yaml\n"
+        + body
+        + "```\n"
+    )
+
+
+def test_consequence_forms_that_keep_a_hash_parse_whole():
+    rows = [
+        ('- id: g\n  text: "mentions #7 here"\n', ("mentions #7 here", [])),
+        ("- id: g\n  text: 'mentions #7 here'\n", ("mentions #7 here", [])),
+        ("- id: g\n  text: |\n    mentions #7 here\n", ("mentions #7 here\n", [])),
+        ("- id: g\n  text: >\n    mentions #7\n    here\n", ("mentions #7 here\n", [])),
+        ("- id: g\n  text: Written in C# and issue#7.\n", ("Written in C# and issue#7.", [])),
+        (
+            "# leading note\n- id: g  # slug\n  # between\n  text: t\n  kind: scope  # why\n",
+            ("t", []),
+        ),
+        ('- id: g\n  text: t\n  affects: ["#7"]  # the DST issue\n', ("t", ["#7"])),
+        ('- id: g\n  text: t\n  affects:\n    - "#7"\n', ("t", ["#7"])),
+        ("- id: g\n  text: t\n  affects: []  # none yet\n", ("t", [])),
+        ("- id: g\n  text: t\n  affects:  # none yet\n", ("t", [])),
+        ("- id: g\n  text: t\n  affects:\n", ("t", [])),
+    ]
+    got = []
+    for body, _ in rows:
+        c = parse_adr(_adr_with_consequences(body)).consequences[0]
+        got.append((c.text, c.affects))
+    assert got == [expected for _, expected in rows]
