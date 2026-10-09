@@ -1801,6 +1801,30 @@ def test_propose_adr_writes_events_and_emits_json(tmp_path, capsys):
     assert len(list(events_dir.glob("*.yaml"))) > 0
 
 
+def test_propose_adr_refuses_an_adr_that_does_not_parse(tmp_path, capsys):
+    repo = tmp_path / "repo"
+    adr_dir = repo / "docs" / "adr"
+    adr_dir.mkdir(parents=True)
+    (adr_dir / "0002-per-trip.md").write_text(
+        STRUCTURED_ADR_TEXT.replace(
+            "text: Issue 29 must be updated.",
+            "text: General knowledge, which happens to mention #29 in passing.",
+        )
+    )
+    perturb_root = repo / ".perturb"
+    perturb_root.mkdir()
+    transport = _make_propose_transport([_make_page([_make_issue_node(29, title="Issue 29")])])
+
+    rc = main(
+        ["propose", "adr:2", "--by", "geuben", "--json"],
+        transport=transport,
+        root=perturb_root,
+        repo_root=repo,
+    )
+    envelope = json.loads(capsys.readouterr().out)
+    assert (rc, envelope["ok"], envelope["reason"]) == (1, False, "consequence_comment")
+
+
 STRUCTURED_ADR_WITH_MENTION = """\
 ---
 id: 2

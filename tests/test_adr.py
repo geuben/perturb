@@ -787,3 +787,108 @@ def test_adr_filenames_are_classified_by_what_propose_can_resolve():
     ]
     for name, expected in adr_cases + near_miss_cases + other_cases:
         assert classify_adr_filename(name) == expected, f"{name!r}"
+
+
+def _adr_with_consequences(body: str) -> str:
+    return (
+        "---\nid: 1\ntitle: T\nstatus: accepted\ndate: 2026-01-01\nsupersedes: []\n"
+        "areas: []\n---\n\n## Context\nx\n\n## Decision\ny\n\n## Consequences\n\n```yaml\n"
+        + body
+        + "```\n"
+    )
+
+
+def test_consequence_forms_that_keep_a_hash_parse_whole():
+    rows = [
+        ('- id: g\n  text: "mentions #7 here"\n', ("mentions #7 here", [])),
+        ("- id: g\n  text: 'mentions #7 here'\n", ("mentions #7 here", [])),
+        ("- id: g\n  text: |\n    mentions #7 here\n", ("mentions #7 here\n", [])),
+        ("- id: g\n  text: >\n    mentions #7\n    here\n", ("mentions #7 here\n", [])),
+        ("- id: g\n  text: Written in C# and issue#7.\n", ("Written in C# and issue#7.", [])),
+        (
+            "# leading note\n- id: g  # slug\n  # between\n  text: t\n  kind: scope  # why\n",
+            ("t", []),
+        ),
+        ('- id: g\n  text: t\n  affects: ["#7"]  # the DST issue\n', ("t", ["#7"])),
+        ('- id: g\n  text: t\n  affects:\n    - "#7"\n', ("t", ["#7"])),
+        ("- id: g\n  text: t\n  affects: []  # none yet\n", ("t", [])),
+        ("- id: g\n  text: t\n  affects:  # none yet\n", ("t", [])),
+        ("- id: g\n  text: t\n  affects:\n", ("t", [])),
+    ]
+    got = []
+    for body, _ in rows:
+        c = parse_adr(_adr_with_consequences(body)).consequences[0]
+        got.append((c.text, c.affects))
+    assert got == [expected for _, expected in rows]
+
+
+def test_migrate_quotes_a_text_with_a_mid_sentence_mention():
+    src = (
+        "# ADR 0005 — Mentions\n\n**Status:** accepted · 2026-09-13\n\n## Consequences\n\n"
+        "- General knowledge, which happens to mention #7 in passing.\n"
+    )
+    adr = parse_adr(migrate_adr(src, adr_id=5)[0])
+    assert adr.consequences[0].text == "General knowledge, which happens to mention #7 in passing."
+
+
+def test_a_value_lost_to_a_yaml_comment_is_refused():
+    affects_detail = 'has an affects entry lost to a YAML comment; write each issue ref as "#N"'
+    rows = [
+        (
+            "- id: general\n  text: General knowledge, which happens to mention #7 in passing.\n",
+            (
+                "consequence_comment",
+                "consequence 'general' text is cut off at a YAML comment, dropping "
+                "'#7 in passing.'; put the text in double quotes",
+            ),
+        ),
+        (
+            "- id: note\n  text: Plain sentence.  # TODO\n",
+            (
+                "consequence_comment",
+                "consequence 'note' text is cut off at a YAML comment, dropping "
+                "'# TODO'; put the text in double quotes",
+            ),
+        ),
+        (
+            "- id: backfill\n  text: Backfilled days remain daily-grain,\n"
+            "    see #29 for the split.\n",
+            (
+                "consequence_comment",
+                "consequence 'backfill' text is cut off at a YAML comment, dropping "
+                "'#29 for the split.'; put the text in double quotes",
+            ),
+        ),
+        (
+            "- id: dst\n  text: t\n  affects:\n    - #7\n",
+            ("affects_comment", f"consequence 'dst' {affects_detail}"),
+        ),
+        (
+            "- id: refund\n  text: t\n  affects: #7\n",
+            ("affects_comment", f"consequence 'refund' {affects_detail}"),
+        ),
+    ]
+    got = []
+    for body, _ in rows:
+        try:
+            parse_adr(_adr_with_consequences(body))
+        except AdrError as exc:
+            got.append((exc.reason, exc.detail))
+        else:
+            got.append(None)
+    assert got == [expected for _, expected in rows]
+
+
+def test_a_consequences_block_that_is_not_yaml_is_refused():
+    hint = "an unquoted ' #' starts a YAML comment, so put any text containing one in double quotes"
+    bodies = [
+        "- id: g\n  text: Backfilled days, see #29\n    and never re-priced.\n",
+        "- id: g\n  text: mentions\t#7 here.\n",
+    ]
+    got = []
+    for body in bodies:
+        try:
+            parse_adr(_adr_with_consequences(body))
+        except AdrError as exc:
+            got.append((exc.reason, exc.detail.endswith(hint)))
+    assert got == [("bad_consequences", True), ("bad_consequences", True)]

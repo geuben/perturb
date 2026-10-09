@@ -978,7 +978,16 @@ def main(argv: list[str] | None = None, *, transport=None, root=None, repo_root=
 
         # adr path (unchanged)
         adr_path = resolve_adr_path(_repo_root, ref.id)
-        adr = parse_adr(adr_path.read_text())
+        try:
+            adr = parse_adr(adr_path.read_text())
+        except AdrError as exc:
+
+            def _unparsed_refusal(warn, _exc=exc):
+                raise Refusal(_exc.reason, _exc.detail)
+
+            return dispatch(
+                "propose", _unparsed_refusal, json_out=json_out, out=sys.stdout, err=sys.stderr
+            )
         adr_rel_path = str(adr_path.relative_to(_repo_root))
 
         _area_set = load_areas(_repo_root / "perturb" / "areas.yaml")

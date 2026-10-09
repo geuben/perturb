@@ -32,14 +32,13 @@ def adr_findings(adr_dir: Path, graph: dict, area_set: AreaSet | None = None) ->
         try:
             adr = parse_adr(path.read_text())
         except AdrError as exc:
-            findings.append(
-                {
-                    "kind": "adr_parse",
-                    "ref": path.name,
-                    "detail": str(exc),
-                    "fix": f"fix the front-matter or body of {path.name}",
-                }
-            )
+            if exc.reason == "consequence_comment":
+                kind, fix = exc.reason, f"put the consequence text in double quotes in {path.name}"
+            elif exc.reason == "affects_comment":
+                kind, fix = exc.reason, f'write each issue ref in affects as "#N" in {path.name}'
+            else:
+                kind, fix = "adr_parse", f"fix the front-matter or body of {path.name}"
+            findings.append({"kind": kind, "ref": path.name, "detail": str(exc), "fix": fix})
             continue
         parsed[adr.id] = adr
         m = re.match(r"(\d+)", path.name)

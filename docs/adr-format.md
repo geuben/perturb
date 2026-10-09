@@ -68,7 +68,11 @@ areas: [rides, fares, rollup]
 Consequences are a YAML list inside a fenced `yaml` block; `adr migrate` writes that
 form. An unfenced list of the same shape also parses, but the fence keeps GitHub from rendering
 it as prose bullets. It is real YAML: a `text` that starts with a backtick or other YAML
-indicator must be quoted.
+indicator must be quoted. A ` #` anywhere in an unquoted `text` starts a YAML comment, so a
+`text` that names an issue mid-sentence must be double-quoted
+(`text: "Backfilled days, see #29 for the split."`). An issue ref in `affects` is always written
+`"#N"`. `perturb` refuses an ADR where either was lost to a comment (`consequence_comment`,
+`affects_comment`).
 
 Fields per consequence:
 
@@ -183,6 +187,9 @@ resolve. Other Markdown in that directory (an index `README.md`, a template, etc
 - **`adr_filename`** — a Markdown file in `docs/adr` whose name starts with digits but is not
   `NNNN-<title>.md` (e.g. `2-x.md`, `0002_x.md`). Rename it to `NNNN-<title>.md`.
 - front-matter `id` matches the filename number;
+- a consequence whose plain `text` is cut off by a ` #…` comment is `consequence_comment`; an
+  `affects` ref lost to one (`- #7`, `affects: #7`) is `affects_comment`; a Consequences block
+  that is not valid YAML is `adr_parse`;
 - every `affects` ref resolves (issue exists, area is declared);
 - every consequence `id` is unique within the ADR;
 - `status: superseded` has a `superseded_by` entry that is a whole-ADR ref `adr:NNNN` (no

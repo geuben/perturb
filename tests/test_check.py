@@ -449,3 +449,43 @@ def test_a_near_miss_adr_filename_is_a_finding(tmp_path):
         )
         result = [(f["kind"], f["ref"]) for f in adr_findings(adr_dir, {"issues": {}})]
         assert result == [("adr_filename", name)], f"name={name!r}: got {result!r}"
+
+
+def test_a_consequence_lost_to_a_yaml_comment_is_its_own_finding(tmp_path):
+    rows = [
+        (
+            "- id: general\n  text: General knowledge, which happens to mention #7 in passing.\n",
+            [
+                (
+                    "consequence_comment",
+                    "0002-x.md",
+                    "put the consequence text in double quotes in 0002-x.md",
+                )
+            ],
+        ),
+        (
+            "- id: dst\n  text: t\n  affects:\n    - #7\n",
+            [
+                (
+                    "affects_comment",
+                    "0002-x.md",
+                    'write each issue ref in affects as "#N" in 0002-x.md',
+                )
+            ],
+        ),
+        (
+            "- id: g\n  text: Backfilled days, see #29\n    and never re-priced.\n",
+            [("adr_parse", "0002-x.md", "fix the front-matter or body of 0002-x.md")],
+        ),
+    ]
+    got = []
+    for row, (body, _) in enumerate(rows):
+        adr_dir = tmp_path / str(row)
+        adr_dir.mkdir()
+        (adr_dir / "0002-x.md").write_text(
+            "---\nid: 2\ntitle: T2\nstatus: accepted\ndate: 2026-09-08\n---\n\n"
+            f"## Consequences\n\n```yaml\n{body}```\n"
+        )
+        findings = adr_findings(adr_dir, {"issues": {}})
+        got.append([(f["kind"], f["ref"], f["fix"]) for f in findings])
+    assert got == [expected for _, expected in rows]
