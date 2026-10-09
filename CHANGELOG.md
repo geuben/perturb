@@ -6,6 +6,8 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.3] - 2026-10-09
+
 ### Fixed
 
 - **An unquoted `#N` in a consequence no longer silently truncates or drops.** A mid-sentence
