@@ -11,3 +11,6 @@ Why perturb is built the way it is, kept for people working on it. To use pertur
 | [06-open-decisions.md](06-open-decisions.md) | decisions taken, with the alternatives considered |
 | [07-roadmap.md](07-roadmap.md) | build order and what shipped |
 | [sync-and-cache.md](sync-and-cache.md) | the GitHub sync, the `.perturb/` cache and the test seam |
+
+Exploratory ideas for parallel agents, many teams and many repositories are kept separately in
+[`docs/enterprise-roadmap/`](../enterprise-roadmap/README.md). None of it is decided.
